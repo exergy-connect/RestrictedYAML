@@ -56,6 +56,128 @@ JSON solves some of these issues but wastes tokens and is less human-friendly.
 - **Canonicalizer** to normalize arbitrary YAML  
 - **Examples & tests** demonstrating deterministic output
 
+---
+
+## 💻 Usage
+
+### Basic Usage
+
+```python
+from lib.restricted_yaml import RestrictedYAML
+
+# Convert Python data to Restricted YAML
+data = {
+    'name': 'John',
+    'age': 30,
+    'active': True,
+    'tags': ['dev', 'ops'],
+    'config': {
+        'host': 'localhost',
+        'port': 5432
+    }
+}
+
+yaml_str = RestrictedYAML.to_restricted_yaml(data)
+print(yaml_str)
+```
+
+**Output:**
+```yaml
+active: true
+age: 30
+config:
+  host: localhost
+  port: 5432
+name: John
+tags:
+  - dev
+  - ops
+```
+
+Note: Keys are automatically sorted lexicographically (notice `active` comes before `age` before `name`).
+
+### Validate YAML
+
+```python
+# Check if YAML conforms to Restricted YAML spec
+yaml_text = """
+name: John
+age: 30
+active: true
+"""
+
+is_valid, error = RestrictedYAML.validate(yaml_text)
+if is_valid:
+    print("✓ Valid Restricted YAML")
+else:
+    print(f"✗ Invalid: {error}")
+```
+
+### Normalize Existing YAML
+
+```python
+# Convert any YAML to Restricted YAML format
+standard_yaml = """
+# This is a comment
+name: "John"  # Quoted string
+age: 30
+tags: [dev, ops]  # Flow style
+"""
+
+restricted_yaml = RestrictedYAML.normalize(standard_yaml)
+print(restricted_yaml)
+```
+
+**Output:**
+```yaml
+age: 30
+name: John
+tags:
+  - dev
+  - ops
+```
+
+Comments removed, quotes removed (when safe), flow style converted to block style.
+
+### Deterministic Quoting
+
+```python
+# Check if a string needs quotes
+strings = ['John', 'John Doe', '42', 'true', 'hello-world']
+
+for s in strings:
+    needs_quotes = RestrictedYAML.needs_quotes(s)
+    result = f'"{s}"' if needs_quotes else s
+    print(f"{s:15} → {result}")
+```
+
+**Output:**
+```
+John            → John
+John Doe        → "John Doe"
+42              → "42"
+true            → "true"
+hello-world     → "hello-world"
+```
+
+### Parse Restricted YAML
+
+```python
+import yaml
+
+# Restricted YAML is valid YAML - use any YAML parser
+restricted_yaml = """
+active: true
+age: 30
+name: John
+"""
+
+data = yaml.safe_load(restricted_yaml)
+print(data)  # {'active': True, 'age': 30, 'name': 'John'}
+```
+
+---
+
 ### Tool Output Examples
 
 #### Variance Comparison (`compare_restricted_yaml.py`)
