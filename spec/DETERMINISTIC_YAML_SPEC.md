@@ -206,12 +206,33 @@ age: 30
 ```
 
 **Rules for `$human$` fields:**
-- Key must be exactly `$human$` (dollar signs indicate human-authored context)
-- Value must be a quoted string (since it contains spaces/punctuation)
-- **Position**: `$human$` keys always appear **first** within their parent object
-- **Single field**: Only one `$human$` field per object is allowed (use structured value if multiple annotations needed)
-- **Empty values**: Empty `$human$` values are stripped during normalization
-- **Namespace safety**: Extremely unlikely to collide with real field names
+
+1. **One per object maximum** - No multiple `$human$` keys in the same mapping
+2. **Always positioned first** - Before any other keys in the object
+3. **Consolidate context** - All human reasoning for that scope in one annotation
+4. **Nested scopes** - Child objects can have their own `$human$` field
+5. **Value format** - Must be a quoted string (since it contains spaces/punctuation), or a structured object
+6. **Empty values** - Empty `$human$` values are stripped during normalization
+7. **Namespace safety** - Extremely unlikely to collide with real field names
+
+**Correct:**
+```yaml
+service:
+  $human$: Context for this service object
+  name: auth
+  config:
+    $human$: Context for this config object
+    timeout: 30
+```
+
+**Incorrect:**
+```yaml
+service:
+  $human$: Context 1
+  name: auth
+  $human$: Context 2  # ❌ Multiple $human$ keys in same object
+  timeout: 30
+```
 
 **Example with nested comments:**
 ```yaml

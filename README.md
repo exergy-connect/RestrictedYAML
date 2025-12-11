@@ -243,7 +243,60 @@ tags:
   - ops
 ```
 
-**Note**: Comments are preserved as `$human$` fields (not discarded), which always appear first in each object—the golden seams that make human insight visible. Quotes removed (when safe), flow style converted to block style. Note: `$human$` values are quoted when they contain spaces or special characters (following the same quoting rules as other strings).
+**Note**: Comments are preserved as `$human$` fields (not discarded), which always appear first in each object—the golden seams that make human insight visible. Quotes removed (when safe), flow style converted to block style.
+
+## 🔧 Converting Existing YAML
+
+**Comment preservation is deterministic, not dependent on LLM behavior.**
+
+### Automatic Conversion
+
+```bash
+# Convert standard YAML to Deterministic YAML
+dyaml convert config.yaml --output config.dyaml
+```
+
+Or using Python:
+
+```python
+from lib.deterministic_yaml import DeterministicYAML
+
+# Read existing YAML file
+with open('config.yaml', 'r') as f:
+    standard_yaml = f.read()
+
+# Convert to Deterministic YAML (preserves comments as $human$ fields)
+deterministic_yaml = DeterministicYAML.normalize(standard_yaml)
+
+# Write output
+with open('config.dyaml', 'w') as f:
+    f.write(deterministic_yaml)
+```
+
+### Canonical Mode (Strip Comments)
+
+For pure data without human annotations:
+
+```python
+# Convert and strip all $human$ fields
+deterministic_yaml = DeterministicYAML.normalize(standard_yaml, preserve_comments=False)
+```
+
+Or strip existing `$human$` fields:
+
+```python
+import yaml
+from lib.deterministic_yaml import DeterministicYAML
+
+# Load YAML with $human$ fields
+data = yaml.safe_load(yaml_str)
+
+# Strip all $human$ fields for canonical mode
+data_only = DeterministicYAML.strip_human(data)
+
+# Generate pure data YAML
+canonical_yaml = DeterministicYAML.to_deterministic_yaml(data_only)
+```
 
 ### Example: Making Repairs Visible
 
