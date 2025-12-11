@@ -50,6 +50,8 @@ Every `$human$` field is visible evidence of human contribution. When an LLM reg
 
 **Comments matter — enough that they need to be handled deterministically, not thrown away.**
 
+In Deterministic YAML, **comments are gifts**. The spec doesn't let them vanish under the tree; instead, we wrap them carefully as deterministic data so every human insight survives regeneration.
+
 When you normalize YAML with comments, they are automatically converted to `$human$` fields (which always appear first in each object), ensuring your documentation and insights remain part of the data structure. Every repair, every human insight, becomes a visible golden seam in the artifact.
 
 ---

@@ -165,6 +165,8 @@ Deterministic YAML applies the Japanese art of **Kintsukuroi** (金継ぎ) to co
 
 **Deterministic YAML treats comments as first-class data** — as `$human$` key-value pairs that survive all operations. Every `$human$` field is a golden seam showing where human judgment intervened. This ensures human insight doesn't vanish—it becomes visible evidence of human contribution.
 
+**In Deterministic YAML, comments are gifts.** The spec doesn't let them vanish under the tree; instead, we wrap them carefully as deterministic data so every human insight survives regeneration.
+
 **The `$human$` field isn't just documentation—it's the golden seam that makes repairs visible, not invisible.**
 
 #### Prohibition
