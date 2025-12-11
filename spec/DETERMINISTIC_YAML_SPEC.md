@@ -169,6 +169,18 @@ Deterministic YAML applies the Japanese art of **Kintsukuroi** (金継ぎ) to co
 
 **The `$human$` field isn't just documentation—it's the golden seam that makes repairs visible, not invisible.**
 
+#### The AI Boundary: Reducing Guesswork
+
+**Both humans and LLMs are fundamentally non-deterministic—no intermediate system can "fix" that.** Deterministic YAML isn't trying to make the process fully deterministic, only more so.
+
+The key difference is at the **AI boundary**:
+
+- **With standard YAML**: Comments are stripped before the model processes the file. Human reasoning never reaches the LLM as input—it's invisible to the transformation process. With less information, the model must guess about intent.
+
+- **With Deterministic YAML**: `$human$` fields are structural data, not discardable syntax. The LLM receives them as explicit input, so human reasoning can be considered during transformation. The model may still act non-deterministically, but there's a non-zero chance it comes closer to human intent because it has more complete information.
+
+**The goal isn't perfect determinism—it's reducing the guesswork.** Instead of the model operating blind to human reasoning, it can consider that reasoning when making decisions. The outputs are still non-deterministic, but possibly less so.
+
 #### Prohibition
 
 - **YAML comment syntax (`#`) is not allowed anywhere in Deterministic YAML**
