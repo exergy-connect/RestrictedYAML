@@ -302,13 +302,37 @@ class RestrictedYAML:
             # Check for violations
             violations = []
             
-            # Check for comments
+            # Check for comments (both line and inline)
             if '#' in yaml_str:
                 lines = yaml_str.split('\n')
+                in_quoted_string = False
+                quote_char = None
+                
                 for i, line in enumerate(lines, 1):
                     stripped = line.strip()
+                    
+                    # Check if line starts with comment (line comment)
                     if stripped.startswith('#'):
                         violations.append(f"Line {i}: Comments not allowed")
+                        continue
+                    
+                    # Check for inline comments (simplified - doesn't handle all edge cases)
+                    # Look for # that's not inside a quoted string
+                    if '#' in line:
+                        # Simple heuristic: if # appears and line doesn't end with quote,
+                        # and # is not immediately after a quote, it's likely a comment
+                        # This is approximate - full parsing would be more accurate
+                        parts = line.split('#')
+                        if len(parts) > 1:
+                            # Check if # is in a quoted string by counting quotes
+                            before_hash = parts[0]
+                            quote_count_before = before_hash.count('"') + before_hash.count("'")
+                            # If even number of quotes before #, we're outside a string
+                            if quote_count_before % 2 == 0:
+                                # Check if there's content after # (not just whitespace/end)
+                                after_hash = '#'.join(parts[1:])
+                                if after_hash.strip() and not after_hash.strip().startswith('"'):
+                                    violations.append(f"Line {i}: Inline comments not allowed")
             
             # Check for document markers
             if yaml_str.strip().startswith('---') or '...' in yaml_str:

@@ -1,0 +1,74 @@
+# Restricted YAML GBNF Grammar
+# For use with llama.cpp and other GBNF-compatible parsers
+
+# Entry point
+yaml ::= element
+
+# Elements
+element ::= mapping | list | scalar
+
+# Mapping
+mapping ::= pair | pair mapping
+pair ::= key ":" SP value
+key ::= IDENT
+value ::= scalar | mapping | list
+
+# Lists
+list ::= list_item | list_item list
+list_item ::= "-" SP list_value
+list_value ::= scalar | mapping | list
+
+# Scalars
+scalar ::= IDENT | QUOTED | NUMBER | BOOLEAN | NULL
+
+# Identifiers (unquoted strings)
+IDENT ::= /[A-Za-z0-9_]+/
+
+# Quoted strings
+QUOTED ::= "\"" QUOTED_CHAR* "\""
+QUOTED_CHAR ::= /[^"\\]/ | ESCAPE
+ESCAPE ::= "\\n" | "\\t" | "\\r" | "\\\\" | "\\\""
+
+# Numbers
+NUMBER ::= /-?[0-9]+/
+
+# Booleans
+BOOLEAN ::= "true" | "false"
+
+# Null
+NULL ::= "null"
+
+# Whitespace
+SP ::= " "
+
+# ============================================================================
+# COMMENTS: EXPLICITLY FORBIDDEN
+# ============================================================================
+#
+# Formal Rule: Comments are strictly forbidden in Restricted YAML.
+# The '#' character may NOT appear in Restricted YAML except as part of
+# a quoted string value.
+#
+# This means:
+# - Line comments (# comment) are FORBIDDEN
+# - Inline comments (key: value # comment) are FORBIDDEN
+# - Block comments are FORBIDDEN
+#
+# Sanctioned Alternative: Use _comment key-value pairs for documentation.
+#
+# Valid examples:
+#   _comment: "This is documentation"
+#   name: John
+#   config:
+#     _comment: "Database settings"
+#     host: localhost
+#
+# Invalid examples:
+#   # This is a comment (FORBIDDEN)
+#   name: John  # inline comment (FORBIDDEN)
+#   # Block comment (FORBIDDEN)
+#
+# Rationale: Comments introduce variance - the same logical data can have
+# different comments, breaking determinism. _comment fields are part of
+# the data structure, ensuring deterministic output.
+

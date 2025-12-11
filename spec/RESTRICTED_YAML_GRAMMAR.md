@@ -77,6 +77,22 @@ INDENT(n) ::= "  " INDENT(n - 1)
 
 SP ::= " "
 
+# Comments -----------------------------------------------------------------
+
+# EXPLICITLY FORBIDDEN: The '#' character is not part of the grammar.
+# Comments are not allowed in Restricted YAML.
+# 
+# Formal Rule: Comments are strictly forbidden. The '#' character may not
+# appear in Restricted YAML except as part of a quoted string value.
+#
+# Sanctioned Alternative: Use _comment key-value pairs for documentation.
+# Example:
+#   _comment: "This is documentation"
+#   name: John
+#
+# The _comment field is a regular key-value pair, sorted lexicographically
+# like any other key. Multiple _comment fields are allowed but not recommended.
+
 # End ----------------------------------------------------------------------
 ```
 
@@ -164,8 +180,11 @@ description: "A quoted string"
 - `tags: [a, b]` (inline lists not in grammar)
 - `{key: value}` (flow style not in grammar)
 - `key: |` (multi-line strings not in grammar)
-- `# comment` (comments not in grammar)
+- `# comment` (comments **explicitly forbidden** - not in grammar)
+- `key: value  # inline comment` (inline comments **explicitly forbidden**)
 - `key: ~` (null must be `null`, not `~`)
+
+**Note on Comments**: The `#` character is not part of the Restricted YAML grammar. Comments are explicitly forbidden. Use `_comment: "documentation"` key-value pairs instead.
 
 ## Parser Implementation
 

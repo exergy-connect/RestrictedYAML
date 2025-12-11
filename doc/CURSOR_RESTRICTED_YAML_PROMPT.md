@@ -53,9 +53,28 @@ Your goal is to produce deterministic, low-variance, LLM-friendly YAML with stri
 - Forbidden.
 - If needed, use `\n` inside a double-quoted string.
 
-### 8. Comments
+### 8. Comments - Explicitly Forbidden
 
-- Forbidden.
+**Formal Rule: Comments are strictly forbidden in Restricted YAML.**
+
+- **YAML comment syntax (`#`) is not allowed anywhere**
+- This includes line comments, inline comments, and block comments
+- **Rationale**: Comments introduce variance - same data, different comments = non-deterministic
+
+**Sanctioned Alternative: Use `_comment` key-value pairs**
+
+When documentation is needed:
+```yaml
+_comment: "This is documentation"
+name: John
+age: 30
+```
+
+Rules for `_comment`:
+- Key must be exactly `_comment`
+- Value must be a quoted string
+- Treated as regular key-value pair (sorted lexicographically)
+- Multiple `_comment` fields allowed but not recommended
 
 ### 9. Anchors & Aliases
 

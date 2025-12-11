@@ -147,11 +147,58 @@ config: {}
     Line 2
   ```
 
-### 10. Comments
+### 10. Comments - Explicitly Forbidden
 
-- **Forbidden**
-- Comments add variance (same data, different comments)
-- If documentation is needed, use a separate field: `_comment: "..."`
+**Formal Rule: Comments are strictly forbidden in Restricted YAML.**
+
+#### Prohibition
+
+- **YAML comment syntax (`#`) is not allowed anywhere in Restricted YAML**
+- This includes:
+  - Line comments: `# This is a comment`
+  - Inline comments: `key: value  # comment`
+  - Block comments: `# Comment block`
+- **Rationale**: Comments introduce variance - the same logical data can have different comments, breaking determinism
+
+#### Sanctioned Alternative: `_comment` Fields
+
+**When documentation is needed, use a `_comment` key with a string value:**
+
+```yaml
+# INVALID - Comments are forbidden
+name: John
+# age: 30  # This is also invalid
+
+# VALID - Use _comment field instead
+_comment: "User profile configuration"
+name: John
+age: 30
+```
+
+**Rules for `_comment` fields:**
+- Key must be exactly `_comment` (underscore prefix indicates metadata)
+- Value must be a quoted string (since it contains spaces/punctuation)
+- `_comment` fields are treated as regular key-value pairs
+- Multiple `_comment` fields are allowed (though not recommended)
+- `_comment` fields are sorted lexicographically like other keys
+
+**Example with nested comments:**
+```yaml
+_comment: "Main configuration"
+config:
+  _comment: "Database settings"
+  host: localhost
+  port: 5432
+```
+
+**Benefits of `_comment` fields:**
+- Deterministic: Same data always produces same YAML
+- Parseable: Comments are part of the data structure
+- Sortable: Comments are included in lexicographic key sorting
+- Portable: Comments survive round-trip through any YAML parser
+- LLM-friendly: Clear, unambiguous syntax
+
+**Note**: The `_comment` convention is a data-level solution, not a syntax-level feature. It maintains determinism while allowing documentation.
 
 ### 11. Anchors and Aliases
 
