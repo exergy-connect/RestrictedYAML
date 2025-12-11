@@ -151,15 +151,21 @@ config: {}
 
 **Formal Rule: Comments are strictly forbidden in Deterministic YAML.**
 
-#### Philosophy: Comments as Data, Not Metadata
+#### Philosophy: Kintsukuroi for Data
 
-**Comments are human insight that must be preserved, not discarded.** Traditional YAML comments (`#`) are treated as metadata that gets lost, ignored, or rewritten unpredictably during:
+**The pottery was always going to break. The question is whether we hide the cracks or fill them with gold.**
+
+Deterministic YAML applies the Japanese art of **Kintsukuroi** (金継ぎ) to configuration files. In Kintsukuroi, broken pottery is repaired with gold, making repairs visible and beautiful. The mended object is more valuable for having been broken.
+
+**Comments are human insight that must be preserved and made visible, not discarded.** Traditional YAML comments (`#`) are treated as fragile metadata that gets lost, ignored, or rewritten unpredictably during:
 - Round-trip parsing
 - Normalization
 - Regeneration
 - Data transformation
 
-**Deterministic YAML treats comments as first-class data** — as key-value pairs that survive all operations. This ensures human insight doesn't vanish.
+**Deterministic YAML treats comments as first-class data** — as `$human$` key-value pairs that survive all operations. Every `$human$` field is a golden seam showing where human judgment intervened. This ensures human insight doesn't vanish—it becomes visible evidence of human contribution.
+
+**The `$human$` field isn't just documentation—it's the golden seam that makes repairs visible, not invisible.**
 
 #### Prohibition
 
@@ -170,46 +176,57 @@ config: {}
   - Block comments: `# Comment block`
 - **Rationale**: Comments introduce variance - the same logical data can have different comments, breaking determinism. More importantly, YAML comments are fragile metadata that gets lost during processing.
 
-#### Sanctioned Alternative: `_comment` Fields
+#### Sanctioned Alternative: `$human$` Fields
 
-**Comments matter — enough that they need to be handled deterministically, not thrown away.** Use a `_comment` key with a string value to preserve human insight as data:
+**Comments matter — enough that they need to be handled deterministically, not thrown away.** Use a `$human$` key with a string value to preserve human insight as data:
 
 ```yaml
 # INVALID - Comments are forbidden
 name: John
 # age: 30  # This is also invalid
 
-# VALID - Use _comment field instead
-_comment: "User profile configuration"
+# VALID - Use $human$ field instead
+$human$: "User profile configuration"
 name: John
 age: 30
 ```
 
-**Rules for `_comment` fields:**
-- Key must be exactly `_comment` (underscore prefix indicates metadata)
+**Rules for `$human$` fields:**
+- Key must be exactly `$human$` (dollar signs indicate human-authored context)
 - Value must be a quoted string (since it contains spaces/punctuation)
-- `_comment` fields are treated as regular key-value pairs
-- Multiple `_comment` fields are allowed (though not recommended)
-- `_comment` fields are sorted lexicographically like other keys
+- **Position**: `$human$` keys always appear **first** within their parent object
+- **Single field**: Only one `$human$` field per object is allowed (use structured value if multiple annotations needed)
+- **Empty values**: Empty `$human$` values are stripped during normalization
+- **Namespace safety**: Extremely unlikely to collide with real field names
 
 **Example with nested comments:**
 ```yaml
-_comment: "Main configuration"
+$human$: "Main configuration"
 config:
-  _comment: "Database settings"
+  $human$: "Database settings"
   host: localhost
   port: 5432
 ```
 
-**Benefits of `_comment` fields:**
+**Structured `$human$` values** (for rich metadata):
+```yaml
+$human$:
+  comment: "Updated connection limits"
+  author: "alice@example.com"
+  date: "2024-03-15"
+```
+
+**Benefits of `$human$` fields:**
+- **Semantically clear**: Instantly communicates "this is human-authored context"
 - **Preserved as data**: Comments are part of the data structure, not metadata that can be lost
 - **Deterministic**: Same data always produces same YAML (comments included)
 - **Round-trip safe**: Comments survive regeneration, normalization, and any YAML parser
-- **Sortable**: Comments are included in lexicographic key sorting
+- **Always first**: `$human$` appears first in each object, making human context immediately visible
 - **LLM-friendly**: Clear, unambiguous syntax for generating and preserving documentation
 - **Human insight preserved**: The human touch of comments is maintained, not discarded
+- **Machine-readable signal**: LLMs can learn to recognize and preserve this pattern
 
-**Note**: The `_comment` convention is a data-level solution, not a syntax-level feature. It maintains determinism while allowing documentation.
+**Note**: The `$human$` convention is a data-level solution, not a syntax-level feature. It maintains determinism while allowing documentation. The `$human$` key is reserved and always sorts first within its parent object.
 
 ### 11. Anchors and Aliases
 
@@ -373,7 +390,7 @@ name: John
 ### What We Lose
 
 1. **Comments**: Can't add inline documentation
-   - **Solution**: Use `_comment` or `_description` fields
+   - **Solution**: Use `$human$` fields for documentation
 
 2. **Flow Style**: Can't use compact `{key: value}` syntax (except empty collections)
    - **Solution**: Always use block style (more readable anyway)
@@ -453,7 +470,7 @@ normalized = DeterministicYAML.normalize(existing_yaml)
 ## Best Practices
 
 1. **Sort keys alphabetically** for maximum determinism (mandatory)
-2. **Use `_comment` fields** instead of comments
+2. **Use `$human$` fields** instead of comments
 3. **Validate output** to ensure it conforms to deterministic syntax
 4. **Normalize existing YAML** before comparing or processing
 5. **Use deterministic YAML for LLM generation** to reduce variance

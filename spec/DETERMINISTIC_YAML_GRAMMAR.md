@@ -85,12 +85,12 @@ SP ::= " "
 # Formal Rule: Comments are strictly forbidden. The '#' character may not
 # appear in Deterministic YAML except as part of a quoted string value.
 #
-# Sanctioned Alternative: Use _comment key-value pairs for documentation.
+# Sanctioned Alternative: Use $human$ key-value pairs for documentation.
 # Example:
-#   _comment: "This is documentation"
+#   $human$: "This is documentation"
 #   name: John
 #
-# The _comment field is a regular key-value pair, sorted lexicographically
+# The $human$ field is a regular key-value pair, always appearing first in each object
 # like any other key. Multiple _comment fields are allowed but not recommended.
 
 # End ----------------------------------------------------------------------
@@ -184,7 +184,7 @@ description: "A quoted string"
 - `key: value  # inline comment` (inline comments **explicitly forbidden**)
 - `key: ~` (null must be `null`, not `~`)
 
-**Note on Comments**: The `#` character is not part of the Deterministic YAML grammar. Comments are explicitly forbidden. Use `_comment: "documentation"` key-value pairs instead.
+**Note on Comments**: The `#` character is not part of the Deterministic YAML grammar. Comments are explicitly forbidden. Use `$human$: "documentation"` key-value pairs instead.
 
 ## Parser Implementation
 

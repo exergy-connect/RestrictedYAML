@@ -11,7 +11,7 @@ When generating YAML output, always follow the Deterministic YAML Specification.
 5. **Lists**: Always block style with `- item`, never inline `[item]`
 6. **Objects**: Always block style, 2-space indentation
 7. **Multi-line Strings**: Forbidden, use `\n` in quoted strings
-8. **Comments**: Explicitly forbidden. YAML comment syntax (`#`) is not allowed anywhere. Use `_comment: "documentation"` key-value pairs instead
+8. **Comments**: Explicitly forbidden. YAML comment syntax (`#`) is not allowed anywhere. Use `$human$: "documentation"` key-value pairs instead. `$human$` keys always appear first in each object.
 9. **Anchors/Aliases**: Forbidden
 10. **Document Markers**: Forbidden (no `---` or `...`)
 11. **Key Ordering**: Sort keys lexicographically at every level

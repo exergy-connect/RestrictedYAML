@@ -61,19 +61,20 @@ Your goal is to produce deterministic, low-variance, LLM-friendly YAML with stri
 - This includes line comments, inline comments, and block comments
 - **Rationale**: Comments introduce variance - same data, different comments = non-deterministic
 
-**Sanctioned Alternative: Use `_comment` key-value pairs**
+**Sanctioned Alternative: Use `$human$` key-value pairs**
 
 When documentation is needed:
 ```yaml
-_comment: "This is documentation"
+$human$: "This is documentation"
 name: John
 age: 30
 ```
 
-Rules for `_comment`:
-- Key must be exactly `_comment`
-- Value must be a quoted string
-- Treated as regular key-value pair (sorted lexicographically)
+Rules for `$human$`:
+- Key must be exactly `$human$`
+- Value must be a quoted string (or structured object)
+- Always appears first in each object
+- Only one `$human$` field per object allowed
 - Multiple `_comment` fields allowed but not recommended
 
 ### 9. Anchors & Aliases

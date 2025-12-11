@@ -259,11 +259,20 @@ class DeterministicYAML:
                 return '{}'  # Canonical empty mapping
             
             lines = []
-            # Sort keys lexicographically (Unicode codepoint ordering)
-            for key, value in sorted(data.items()):
-                # Key: always unquoted (must be IDENT pattern)
+            # Sort keys: $human$ first, then lexicographically (Unicode codepoint ordering)
+            sorted_items = sorted(data.items())
+            # Move $human$ to the front if it exists
+            human_key = '$human$'
+            sorted_items = [(k, v) for k, v in sorted_items if k == human_key] + \
+                          [(k, v) for k, v in sorted_items if k != human_key]
+            
+            for key, value in sorted_items:
+                # Key: always unquoted (must be IDENT pattern, or $human$)
                 key_str = str(key)
-                if not re.match(r'^[A-Za-z0-9_]+$', key_str):
+                if key_str == '$human$':
+                    # $human$ is a special reserved key
+                    key_str = '$human$'
+                elif not re.match(r'^[A-Za-z0-9_]+$', key_str):
                     # Invalid key - should quote or reject
                     # For now, quote it (but this violates spec)
                     key_str = f'"{DeterministicYAML.escape_string(key_str)}"'
@@ -445,10 +454,11 @@ class DeterministicYAML:
     @staticmethod
     def _add_comments_to_structure(data: Any, comments: List[Dict[str, Any]], path: Optional[List[str]] = None) -> Any:
         """
-        Recursively add extracted comments to the data structure as _comment fields.
+        Recursively add extracted comments to the data structure as $human$ fields.
         
-        This preserves human comments by converting them to _comment key-value pairs.
+        This preserves human comments by converting them to $human$ key-value pairs.
         Comments are associated with their nearest key based on indentation and context.
+        Only one $human$ field per object is allowed.
         """
         if path is None:
             path = []
@@ -456,9 +466,12 @@ class DeterministicYAML:
         if isinstance(data, dict):
             result = {}
             
-            # Preserve existing _comment fields
-            if '_comment' in data:
-                result['_comment'] = data['_comment']
+            # Preserve existing $human$ field (but only one)
+            if '$human$' in data:
+                human_value = data['$human$']
+                # Strip empty $human$ values
+                if human_value and str(human_value).strip():
+                    result['$human$'] = human_value
             
             # Collect comments that belong to this level
             current_indent = len(path)
@@ -476,16 +489,21 @@ class DeterministicYAML:
                         # This is a general comment for this level
                         level_comments.append(comment['comment_text'])
             
-            # Add collected comments as _comment field if we have any
+            # Add collected comments as $human$ field if we have any
             if level_comments:
                 combined_comment = ' '.join(level_comments)
-                if '_comment' in result:
-                    result['_comment'] = f"{result['_comment']} {combined_comment}"
+                if '$human$' in result:
+                    # Combine with existing $human$ value
+                    existing = str(result['$human$'])
+                    result['$human$'] = f"{existing} {combined_comment}".strip()
                 else:
-                    result['_comment'] = combined_comment
+                    result['$human$'] = combined_comment
             
-            # Process each key-value pair
+            # Process each key-value pair (skip $human$ as we already handled it)
             for key, value in data.items():
+                if key == '$human$':
+                    continue
+                
                 # Check if there's a comment specifically for this key
                 key_comments = []
                 for comment in comments:
@@ -499,21 +517,23 @@ class DeterministicYAML:
                 new_path = path + [key]
                 processed_value = DeterministicYAML._add_comments_to_structure(value, comments, new_path)
                 
-                # If this key has comments, add them to a nested _comment if value is a dict
+                # If this key has comments, add them to a nested $human$ if value is a dict
                 if key_comments and isinstance(processed_value, dict):
                     key_comment = ' '.join(key_comments)
-                    if '_comment' in processed_value:
-                        processed_value['_comment'] = f"{processed_value['_comment']} {key_comment}"
+                    if '$human$' in processed_value:
+                        # Combine with existing $human$ value
+                        existing = str(processed_value['$human$'])
+                        processed_value['$human$'] = f"{existing} {key_comment}".strip()
                     else:
-                        processed_value['_comment'] = key_comment
+                        processed_value['$human$'] = key_comment
                 elif key_comments:
-                    # If value is not a dict, we need to wrap it or add comment at parent level
-                    # For now, add to parent level _comment
+                    # If value is not a dict, add comment to parent level $human$
                     key_comment = ' '.join(key_comments)
-                    if '_comment' in result:
-                        result['_comment'] = f"{result['_comment']} {key_comment}"
+                    if '$human$' in result:
+                        existing = str(result['$human$'])
+                        result['$human$'] = f"{existing} {key_comment}".strip()
                     else:
-                        result['_comment'] = key_comment
+                        result['$human$'] = key_comment
                 
                 result[key] = processed_value
             
@@ -529,21 +549,21 @@ class DeterministicYAML:
         Normalize YAML to deterministic format, preserving human comments.
         
         This converts any valid YAML to deterministic YAML format.
-        Comments (both line and inline) are extracted and converted to _comment fields
+        Comments (both line and inline) are extracted and converted to $human$ fields
         to preserve human insight as first-class data that survives all operations.
         
         The normalize method:
         1. Extracts all comments from the original YAML text
         2. Parses the YAML data structure
         3. Maps comments to their appropriate locations in the structure
-        4. Adds them as _comment key-value pairs
+        4. Adds them as $human$ key-value pairs (appearing first in each object)
         5. Generates deterministic YAML with comments preserved as data
         
         Args:
             yaml_str: Input YAML string (may contain # comments)
         
         Returns:
-            Deterministic YAML string with comments preserved as _comment fields
+            Deterministic YAML string with comments preserved as $human$ fields
         
         Example:
             Input:
@@ -552,7 +572,7 @@ class DeterministicYAML:
                 age: 30
             
             Output:
-                _comment: "User profile name: User's name"
+                $human$: "User profile name: User's name"
                 age: 30
                 name: John
         """
@@ -566,7 +586,7 @@ class DeterministicYAML:
             if data is None:
                 return 'null'
             
-            # If we have comments, add them to the data structure as _comment fields
+            # If we have comments, add them to the data structure as $human$ fields
             if comments:
                 # Ensure root is a dict to hold comments
                 if not isinstance(data, dict):
@@ -578,6 +598,52 @@ class DeterministicYAML:
             return DeterministicYAML.to_deterministic_yaml(data)
         except Exception as e:
             raise ValueError(f"Failed to normalize YAML: {e}")
+    
+    @staticmethod
+    def strip_human(data: Any) -> Any:
+        """
+        Remove all $human$ fields from a data structure.
+        
+        This is useful for canonical mode where pure data is needed,
+        or before schema validation that doesn't expect $human$ fields.
+        
+        Args:
+            data: Python data structure (dict, list, or scalar)
+        
+        Returns:
+            Data structure with all $human$ fields removed
+        
+        Example:
+            Input:
+                {
+                    '$human$': 'User profile',
+                    'name': 'John',
+                    'age': 30,
+                    'config': {
+                        '$human$': 'Database settings',
+                        'host': 'localhost'
+                    }
+                }
+            
+            Output:
+                {
+                    'name': 'John',
+                    'age': 30,
+                    'config': {
+                        'host': 'localhost'
+                    }
+                }
+        """
+        if isinstance(data, dict):
+            result = {}
+            for key, value in data.items():
+                if key != '$human$':
+                    result[key] = DeterministicYAML.strip_human(value)
+            return result
+        elif isinstance(data, list):
+            return [DeterministicYAML.strip_human(item) for item in data]
+        else:
+            return data
 
 
 def compare_formats():

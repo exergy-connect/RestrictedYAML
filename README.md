@@ -1,28 +1,56 @@
 # Deterministic YAML
 
 A **deterministic, LLM-friendly subset of YAML** that remains **100% valid YAML**, while eliminating ambiguity, output variance, and syntax hazards.  
-Deterministic YAML provides a canonical, predictable serialization format ideal for structured data generation and configuration.
+
+**Deterministic YAML makes human intervention visible** through `$human$` fields—the golden seams that show where human judgment intervened. Every repair, every insight, becomes visible evidence of human contribution.
+
+Deterministic YAML provides a canonical, predictable serialization format ideal for structured data generation and configuration, with **Kintsukuroi for data**—making human contribution visible and permanent.
 
 ---
 
-## 💭 Fundamental Philosophy: Preserving Human Value
+## 💭 Fundamental Philosophy: Kintsukuroi for Data
 
-**To comment is human, and human insight must be preserved, not discarded.**
+**The pottery was always going to break. The question is whether we hide the cracks or fill them with gold.**
 
-Deterministic YAML is built on the principle that **human value matters**. Comments, documentation, and contextual insights represent valuable human knowledge that should survive all data operations—round-trips, normalization, regeneration, and transformation.
+Deterministic YAML applies the 500-year-old Japanese art of **Kintsukuroi** (金継ぎ) to configuration files. In Kintsukuroi, broken pottery is repaired with gold, making the repairs visible and beautiful rather than hidden. The mended object is more valuable for having been broken.
 
-### Comments as Data, Not Metadata
+### Making Human Intervention Visible
 
-Traditional YAML comments (`#`) are treated as fragile metadata that gets lost, ignored, or rewritten unpredictably. Deterministic YAML treats comments as **first-class data** through `_comment` key-value pairs:
+**Traditional approach:**
+- Bug appears → fix it → pretend it never happened
+- Comment lost → regenerate without it → no trace it existed
+- Hallucination occurs → correct it silently → history erased
 
-- **Preserved**: Comments survive round-trip parsing, normalization, and regeneration
-- **Deterministic**: Same data always produces same YAML (comments included)
-- **Portable**: Comments are part of the data structure, not metadata that can be discarded
-- **Human insight preserved**: The human touch of comments is maintained, not thrown away
+**Kintsukuroi approach:**
+- Bug appears → fix it → mark where it was broken
+- Comment lost → preserve it as `$human$` → make the human insight visible
+- Hallucination occurs → recognize it → turn the crack into gold
+
+### `$human$` as Golden Seams
+
+Traditional YAML comments (`#`) are treated as fragile metadata that gets lost, ignored, or rewritten unpredictably. Deterministic YAML treats comments as **first-class data** through `$human$` key-value pairs—the golden seams that show where human judgment intervened.
+
+Every `$human$` field is visible evidence of human contribution. When an LLM regenerates config:
+- **Without `$human$`**: Silent drift, invisible degradation
+- **With `$human$`**: The human touchpoints remain visible, like gold in the cracks
+
+**The `$human$` field isn't just documentation—it's the golden seam that shows where human judgment intervened. It makes repairs visible, not invisible.**
+
+### Kintsukuroi Principles Applied
+
+**Kintsukuroi principles:**
+- Breakage and repair are part of the object's history
+- Visibility of repairs adds value
+- The mended object is more beautiful for having been broken
+
+**Deterministic YAML with `$human$`:**
+- Changes and human intervention are part of the config's history
+- Visibility of human reasoning adds value
+- The configuration is more reliable for explicitly showing where humans made decisions
 
 **Comments matter — enough that they need to be handled deterministically, not thrown away.**
 
-When you normalize YAML with comments, they are automatically converted to `_comment` fields, ensuring your documentation and insights remain part of the data structure.
+When you normalize YAML with comments, they are automatically converted to `$human$` fields (which always appear first in each object), ensuring your documentation and insights remain part of the data structure. Every repair, every human insight, becomes a visible golden seam in the artifact.
 
 ---
 
@@ -33,18 +61,20 @@ Standard YAML is flexible but inconsistent:
 - Multiple quoting styles  
 - Block vs flow syntax  
 - Anchors & aliases  
-- Comments  
+- Comments (lost during processing)  
 - Literal & folded blocks  
 - Implicit typing  
 - Whitespace sensitivity  
 - Ambiguous scalars  
 - Inconsistent number formats  
 
-All of these introduce branching points that increase **LLM decoding entropy**, making outputs unpredictable.  
+All of these introduce branching points that increase **LLM decoding entropy**, making outputs unpredictable. More critically, **human insight gets lost**—comments vanish, context disappears, and the history of human judgment is erased.
 
-JSON solves some of these issues but wastes tokens and is less human-friendly.  
+JSON solves some variance issues but wastes tokens, is less human-friendly, and still loses comments.
 
-**Deterministic YAML** hits the middle ground: predictable like JSON, compact and readable like YAML.
+**Deterministic YAML** hits the middle ground: predictable like JSON, compact and readable like YAML, and **makes human intervention visible** through `$human$` fields.
+
+**This isn't just about preventing errors—it's about making human contribution visible and permanent**, even (especially) in a world where AI regenerates everything.
 
 ---
 
@@ -151,7 +181,7 @@ print(deterministic_yaml)
 
 **Output:**
 ```yaml
-_comment: "name: User's name"
+$human$: "name: User's name"
 age: 30
 name: John
 tags:
@@ -159,7 +189,31 @@ tags:
   - ops
 ```
 
-**Note**: Comments are preserved as `_comment` fields (not discarded). Quotes removed (when safe), flow style converted to block style.
+**Note**: Comments are preserved as `$human$` fields (not discarded), which always appear first in each object—the golden seams that make human insight visible. Quotes removed (when safe), flow style converted to block style.
+
+### Example: Making Repairs Visible
+
+```yaml
+# Input with a correction note
+service:
+  $human$: "Originally had typo 'retries: 3', corrected 2024-03-15"
+  retries: 3
+  timeout: 30
+```
+
+The `$human$` field preserves the history of the fix, making the repair visible rather than hidden. This is Kintsukuroi applied to configuration—the crack (the error) becomes a golden seam (the `$human$` annotation) that adds value.
+
+### Example: Making Repairs Visible
+
+```yaml
+# Input with a correction note
+service:
+  $human$: "Originally had typo 'retries: 3', corrected 2024-03-15"
+  retries: 3
+  timeout: 30
+```
+
+The `$human$` field preserves the history of the fix, making the repair visible rather than hidden. This is Kintsukuroi applied to configuration—the crack (the error) becomes a golden seam (the `$human$` annotation) that adds value.
 
 ### Deterministic Quoting
 

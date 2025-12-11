@@ -54,13 +54,13 @@ SP ::= " "
 # - Inline comments (key: value # comment) are FORBIDDEN
 # - Block comments are FORBIDDEN
 #
-# Sanctioned Alternative: Use _comment key-value pairs for documentation.
+# Sanctioned Alternative: Use $human$ key-value pairs for documentation.
 #
 # Valid examples:
-#   _comment: "This is documentation"
+#   $human$: "This is documentation"
 #   name: John
 #   config:
-#     _comment: "Database settings"
+#     $human$: "Database settings"
 #     host: localhost
 #
 # Invalid examples:
@@ -69,6 +69,6 @@ SP ::= " "
 #   # Block comment (FORBIDDEN)
 #
 # Rationale: Comments introduce variance - the same logical data can have
-# different comments, breaking determinism. _comment fields are part of
+# different comments, breaking determinism. $human$ fields are part of
 # the data structure, ensuring deterministic output.
 

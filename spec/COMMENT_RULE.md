@@ -36,48 +36,52 @@ The grammar defines only:
 
 **Comments are not a production rule.**
 
-## Sanctioned Alternative: `_comment` Fields
+## Sanctioned Alternative: `$human$` Fields
 
-When documentation is needed, use a `_comment` key-value pair:
+When documentation is needed, use a `$human$` key-value pair:
 
 ```yaml
-_comment: "This is documentation"
+$human$: "This is documentation"
 name: John
 age: 30
 ```
 
-### Rules for `_comment` Fields
+### Rules for `$human$` Fields
 
-1. **Key**: Must be exactly `_comment` (underscore prefix indicates metadata)
-2. **Value**: Must be a quoted string (since it typically contains spaces/punctuation)
-3. **Treatment**: `_comment` is a regular key-value pair, sorted lexicographically
-4. **Multiple**: Multiple `_comment` fields are allowed but not recommended
-5. **Nested**: `_comment` can appear at any nesting level
+1. **Key**: Must be exactly `$human$` (dollar signs indicate human-authored context)
+2. **Value**: Must be a quoted string (since it typically contains spaces/punctuation), or a structured object
+3. **Position**: `$human$` keys always appear **first** within their parent object
+4. **Single field**: Only one `$human$` field per object is allowed (use structured value if multiple annotations needed)
+5. **Nested**: `$human$` can appear at any nesting level
+6. **Empty values**: Empty `$human$` values are stripped during normalization
 
 ### Examples
 
 **Simple comment:**
 ```yaml
-_comment: "User profile"
+$human$: "User profile"
 name: John
 age: 30
 ```
 
 **Nested comments:**
 ```yaml
-_comment: "Main configuration"
+$human$: "Main configuration"
 config:
-  _comment: "Database settings"
+  $human$: "Database settings"
   host: localhost
   port: 5432
 ```
 
-**Multiple comments (not recommended but valid):**
+**Structured `$human$` value** (for multiple annotations):
 ```yaml
-_comment: "Top-level documentation"
-name: John
-_comment2: "Additional note"  # Valid but not recommended
-age: 30
+$human$:
+  comment: "Updated connection limits"
+  author: "alice@example.com"
+  date: "2024-03-15"
+connection_pool:
+  min_size: 10
+  max_size: 100
 ```
 
 ## Rationale
@@ -115,25 +119,29 @@ age: 30
    - Inline comments: `key: value # comment` - is `#` part of value?
    - Whitespace sensitivity
 
-### Why `_comment` Fields?
+### Why `$human$` Fields?
 
 **Comments matter — enough that they need to be handled deterministically, not thrown away.**
 
-1. **Preserved as data**: Comments are part of the data structure, ensuring they survive all operations
-2. **Deterministic**: Same data → same YAML (comments included)
-3. **Round-trip safe**: Comments survive regeneration, normalization, and any YAML parser
-4. **Sortable**: Comments included in lexicographic key sorting
-5. **Explicit**: Clear, unambiguous syntax
-6. **LLM-friendly**: No ambiguity about where/how to include documentation
-7. **Human insight preserved**: The human touch of comments is maintained, not discarded
+1. **Semantically clear**: Instantly communicates "this is human-authored context"
+2. **Preserved as data**: Comments are part of the data structure, ensuring they survive all operations
+3. **Deterministic**: Same data → same YAML (comments included)
+4. **Round-trip safe**: Comments survive regeneration, normalization, and any YAML parser
+5. **Always first**: `$human$` appears first in each object, making human context immediately visible
+6. **Explicit**: Clear, unambiguous syntax
+7. **LLM-friendly**: No ambiguity about where/how to include documentation
+8. **Human insight preserved**: The human touch of comments is maintained, not discarded
+9. **Machine-readable signal**: LLMs can learn to recognize and preserve this pattern
+10. **Namespace safety**: Extremely unlikely to collide with real field names
 
 ## Validation
 
 A Deterministic YAML validator must:
 
 1. **Reject** any occurrence of `#` outside quoted strings
-2. **Accept** `_comment` fields as regular key-value pairs
+2. **Accept** `$human$` fields as regular key-value pairs (but only one per object)
 3. **Report** line numbers where `#` appears
+4. **Verify** that `$human$` appears first in each object (if present)
 
 ### Validation Example
 
@@ -162,7 +170,7 @@ The grammar comment section states:
 ```
 # Comments are EXPLICITLY FORBIDDEN
 # The '#' character is not part of this grammar.
-# Use _comment key-value pairs for documentation instead.
+# Use $human$ key-value pairs for documentation instead.
 ```
 
 ## Implementation
@@ -171,7 +179,7 @@ The grammar comment section states:
 
 A Deterministic YAML parser must:
 - **Reject** input containing `#` outside quoted strings
-- **Accept** `_comment` as a valid key (treated like any other key)
+- **Accept** `$human$` as a valid key (always appears first in each object)
 - **Report** validation errors with line numbers
 
 ### Normalizer Behavior
@@ -179,16 +187,17 @@ A Deterministic YAML parser must:
 A Deterministic YAML normalizer must:
 - **Remove** all comments (lines starting with `#`, inline `# comment`)
 - **Preserve** data structure
-- **Optionally convert** comments to `_comment` fields (if requested)
+- **Convert** comments to `$human$` fields (preserving human insight as data)
+- **Strip** empty `$human$` values
 
 ## Summary
 
 | Aspect | Standard YAML | Deterministic YAML |
 |--------|---------------|-----------------|
 | Comments | Allowed (`#`) | **Forbidden** |
-| Documentation | Comments | `_comment` fields |
+| Documentation | Comments | `$human$` fields |
 | Determinism | Low (comments vary) | High (comments are data) |
 | LLM-friendly | No (ambiguous) | Yes (explicit) |
 
-**Formal Rule**: `#` is not a valid token in Deterministic YAML grammar. Use `_comment: "documentation"` for documentation needs.
+**Formal Rule**: `#` is not a valid token in Deterministic YAML grammar. Use `$human$: "documentation"` for documentation needs.
 
