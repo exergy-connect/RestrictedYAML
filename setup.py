@@ -19,13 +19,12 @@ setup(
     author_email='',
     url='https://github.com/exergy-connect/DeterministicYAML',
     packages=find_packages(exclude=['tests', 'tests.*']),
-    python_requires='>=3.8',
+    python_requires='>=3.10',
     install_requires=[
-        'click>=8.1.0',
-        'ruamel.yaml>=0.18.0',
-        'rich>=13.0.0',
-        'pydantic>=2.0.0',
-        'pyyaml>=6.0.2',
+        'click>=8.1.0',          # CLI framework
+        'ruamel.yaml>=0.18.0',   # YAML parsing with comment preservation
+        'rich>=13.0.0',          # Terminal output formatting
+        'pyyaml>=6.0.2',         # YAML parsing (fallback when ruamel unavailable)
     ],
     entry_points={
         'console_scripts': [
@@ -37,11 +36,10 @@ setup(
         'Intended Audience :: Developers',
         'License :: OSI Approved :: MIT License',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.8',
-        'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
         'Programming Language :: Python :: 3.11',
         'Programming Language :: Python :: 3.12',
+        'Programming Language :: Python :: 3.13',
         'Topic :: Software Development :: Libraries :: Python Modules',
         'Topic :: Text Processing :: Markup',
     ],
