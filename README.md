@@ -92,6 +92,43 @@ JSON solves some variance issues but wastes tokens, is less human-friendly, and 
 
 **This isn't just about preventing errors—it's about making human contribution visible and permanent**, even (especially) in a world where AI regenerates everything.
 
+### The Problem
+
+Every time an LLM regenerates YAML, three things happen:
+
+1. **Format variance**: Different quotation, indentation, ordering
+2. **Context loss**: Comments disappear without trace
+3. **Silent drift**: Subtle changes that pass validation but break semantics
+
+Current systems don't give humans a **choice**. The system decides: "discard."
+
+### The Solution
+
+Deterministic YAML makes changes **visible** rather than **silent**:
+
+- Structural changes appear in diffs
+- Reasoning changes appear in diffs (via `$human$` fields)
+- Humans can judge: "Was this change valuable or harmful?"
+
+### The Impact
+
+**Before:**
+```yaml
+# Production config - DO NOT CHANGE RETRIES
+retries: 3
+```
+AI regenerates → comment lost → someone changes retries → system breaks
+
+**After:**
+```yaml
+service:
+  $human$: Retries limited to 3 due to downstream rate limits (incident #1247)
+  retries: 3
+```
+AI regenerates → `$human$` preserved → context survives → informed decisions
+
+**The difference:** Humans can make informed decisions instead of guessing.
+
 ---
 
 ## ✅ Features
@@ -117,7 +154,7 @@ JSON solves some variance issues but wastes tokens, is less human-friendly, and 
 
 ## 📦 Included Tools
 
-- **GBNF grammar** for Deterministic YAML  
+- **GBNF grammar** for Deterministic YAML ([`spec/deterministic_yaml.gbnf`](spec/deterministic_yaml.gbnf))  
 - **Python library** (`DeterministicYAML`) for canonical serialization  
 - **Validator** to ensure conformance  
 - **Canonicalizer** to normalize arbitrary YAML  
@@ -205,7 +242,7 @@ tags:
   - ops
 ```
 
-**Note**: Comments are preserved as `$human$` fields (not discarded), which always appear first in each object—the golden seams that make human insight visible. Quotes removed (when safe), flow style converted to block style.
+**Note**: Comments are preserved as `$human$` fields (not discarded), which always appear first in each object—the golden seams that make human insight visible. Quotes removed (when safe), flow style converted to block style. Note: `$human$` values are quoted when they contain spaces or special characters (following the same quoting rules as other strings).
 
 ### Example: Making Repairs Visible
 
@@ -218,6 +255,35 @@ service:
 ```
 
 The `$human$` field preserves the history of the fix, making the repair visible rather than hidden. This is Kintsukuroi applied to configuration—the crack (the error) becomes a golden seam (the `$human$` annotation) that adds value.
+
+### Real-World Example: The "deemvice" Incident
+
+When creating documentation for this project, an AI hallucinated `service:` as `deemvice:`—a plausible-looking but meaningless field name.
+
+**Without `$human$` annotations:**
+```yaml
+# Human wrote this
+service:
+  retries: 3
+
+# AI regenerated as
+deemvice:
+  retries: 3
+```
+The hallucination is syntactically valid but semantically broken. No error is thrown. The system fails silently.
+
+**With `$human$` annotations:**
+```yaml
+service:
+  $human$: Critical authentication service, handles all login requests
+  retries: 3
+```
+
+If an AI hallucinates this as `deemvice:`, the mismatch between the field name and the `$human$` description ("authentication service") immediately signals something is wrong.
+
+**The `$human$` field acts as a semantic checksum for human intent.**
+
+This wasn't a hypothetical example—it actually happened during this project's development, and became the proof-of-concept for why `$human$` annotations matter.
 
 ### Deterministic Quoting
 
@@ -363,5 +429,120 @@ YAML Results:
 
   YAML variance is 3.00x higher than JSON
 ```
+
+---
+
+## ⚠️ Limitations & Design Boundaries
+
+**What Deterministic YAML Does:**
+
+- ✅ Preserves `$human$` fields across transformations (structural stability)
+- ✅ Makes changes to reasoning visible in diffs (detectability)
+- ✅ Reduces guesswork by providing human context to LLMs
+- ✅ Provides canonical, predictable serialization
+
+**What Deterministic YAML Does NOT Do:**
+
+- ❌ Guarantee LLMs won't modify `$human$` content (semantic drift can still occur)
+- ❌ Cryptographically verify authorship (use Git history or add signatures if needed)
+- ❌ Make human reasoning deterministic (humans evolve, context changes)
+- ❌ Prevent LLMs from generating plausible but incorrect `$human$` fields
+
+**The Design Philosophy:**
+
+We can't make humans or LLMs deterministic. We can make changes **visible** so humans can judge whether they're valuable or harmful.
+
+See [Addressing Semantic Drift](#-addressing-semantic-drift) for strategies.
+
+---
+
+## 🔍 Addressing Semantic Drift
+
+When LLMs regenerate files with `$human$` annotations, content may drift. Here are strategies for different contexts:
+
+### Level 1: Visibility (Built-in)
+
+- `$human$` fields survive normalization
+- Changes appear in Git diffs
+- Humans review and judge value/harm
+
+### Level 2: Convention (Social)
+
+```python
+# Prompt engineering
+prompt = """
+When modifying YAML:
+1. Preserve all $human$ fields verbatim
+2. Add new $human$ fields to explain non-obvious changes
+3. Never remove existing $human$ fields without explicit instruction
+"""
+```
+
+### Level 3: Verification (Technical)
+
+```yaml
+service:
+  $human$:
+    content: Keep retries low due to downstream rate limits
+    author: alice@example.com
+    timestamp: 2024-12-11T15:30:00Z
+    hash: sha256:a3f89d2c1e4b7f...
+  retries: 3
+```
+
+Hash mismatches alert humans to content changes.
+
+### Recommended Workflow
+
+1. **Generate** with Deterministic YAML + `$human$` preservation prompts
+2. **Review** diffs before accepting changes
+3. **Verify** critical `$human$` fields haven't drifted
+4. **Add** Git commit messages explaining reasoning changes
+
+---
+
+## 🚫 When NOT to Use Deterministic YAML
+
+**Don't use Deterministic YAML if:**
+
+- You need YAML 1.1 features (some parsers differ on booleans, octals)
+- You require multi-line string literals (use `\n` escapes instead)
+- You're working with existing YAML that can't be canonicalized
+- Your team isn't willing to enforce the canonical format
+- You need nested comments (use structured `$human$` fields instead)
+
+**Consider alternatives if:**
+
+- Token count is more critical than determinism → use compact JSON
+- You need schema validation → add JSON Schema on top
+- You require cryptographic verification → add signatures to `$human$` metadata
+
+---
+
+## ❓ FAQ
+
+**Q: Can an AI generate `$human$` fields?**
+
+A: Yes. The label doesn't authenticate authorship—it signals "this reasoning should survive regeneration." Use Git history for attribution or add structured metadata if you need verification.
+
+**Q: What if human reasoning is wrong?**
+
+A: Wrong reasoning that's visible is better than right reasoning that's lost. `$human$` preserves context so future maintainers can evaluate and correct it.
+
+**Q: Won't this make files longer?**
+
+A: Yes—but the alternative is shorter files with invisible context. Which is more expensive: a few extra lines, or hours debugging why a decision was made?
+
+**Q: How is this different from regular comments?**
+
+A: Regular comments are metadata that parsers discard. `$human$` fields are first-class data that survive transformations and appear in diffs.
+
+**Q: What about YAML 1.1 vs 1.2?**
+
+A: Deterministic YAML targets YAML 1.2. If you need 1.1 compatibility, test carefully with your parser.
+
+**Q: Why does the token count example show Deterministic YAML using more tokens than Standard YAML?**
+
+A: The specific example includes `$human$` fields which add tokens. In general, Deterministic YAML is 20-30% more token-efficient than JSON (compact), while Standard YAML varies. The variance reduction benefit often outweighs the small token cost of `$human$` fields.
 
 ---
