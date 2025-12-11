@@ -647,7 +647,7 @@ A: The specific example includes `$human$` fields which add tokens. In general, 
 
 ### Core Contributors
 
-- **[Your Name]** - Original concept, specification design, implementation
+- **[Jeroen van Bemmel]** - Original concept, specification design, implementation
 
 - **Katalin Bártfai-Walcott** - Critical philosophical challenges on determinism vs. human reasoning, semantic drift concerns
 
