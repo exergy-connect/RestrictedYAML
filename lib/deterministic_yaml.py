@@ -363,14 +363,218 @@ class DeterministicYAML:
             return False, f"Invalid YAML: {str(e)}"
     
     @staticmethod
+    def _extract_comments(yaml_str: str) -> List[Dict[str, Any]]:
+        """
+        Extract comments from YAML text with their context.
+        
+        Returns a list of comment dictionaries with:
+        - line_index: line number (0-based)
+        - indent_level: indentation level
+        - comment_text: the comment text
+        - type: 'line' or 'inline'
+        - key_context: the key this comment is associated with (if determinable)
+        """
+        comments = []
+        lines = yaml_str.split('\n')
+        
+        for i, line in enumerate(lines):
+            stripped = line.strip()
+            
+            # Skip empty lines
+            if not stripped:
+                continue
+            
+            # Calculate indentation level (2 spaces per level)
+            indent_spaces = len(line) - len(line.lstrip())
+            indent_level = indent_spaces // 2
+            
+            # Check for line comments (entire line is a comment)
+            if stripped.startswith('#'):
+                comment_text = stripped[1:].strip()
+                if comment_text:
+                    comments.append({
+                        'line_index': i,
+                        'indent_level': indent_level,
+                        'comment_text': comment_text,
+                        'type': 'line',
+                        'key_context': None
+                    })
+                continue
+            
+            # Check for inline comments
+            if '#' in line:
+                # Check if # is inside a quoted string
+                in_quotes = False
+                quote_char = None
+                hash_pos = -1
+                
+                for j, char in enumerate(line):
+                    if char in ('"', "'") and (j == 0 or line[j-1] != '\\'):
+                        if not in_quotes:
+                            in_quotes = True
+                            quote_char = char
+                        elif char == quote_char:
+                            in_quotes = False
+                            quote_char = None
+                    elif char == '#' and not in_quotes:
+                        hash_pos = j
+                        break
+                
+                if hash_pos >= 0:
+                    before_hash = line[:hash_pos].rstrip()
+                    after_hash = line[hash_pos + 1:].strip()
+                    if after_hash:
+                        # Try to extract the key this comment is associated with
+                        key_context = None
+                        if ':' in before_hash:
+                            # Extract key from "key: value" pattern
+                            key_match = re.match(r'^(\s*)([A-Za-z0-9_]+)\s*:', before_hash)
+                            if key_match:
+                                key_context = key_match.group(2)
+                        
+                        comments.append({
+                            'line_index': i,
+                            'indent_level': indent_level,
+                            'comment_text': after_hash,
+                            'type': 'inline',
+                            'key_context': key_context
+                        })
+        
+        return comments
+    
+    @staticmethod
+    def _add_comments_to_structure(data: Any, comments: List[Dict[str, Any]], path: Optional[List[str]] = None) -> Any:
+        """
+        Recursively add extracted comments to the data structure as _comment fields.
+        
+        This preserves human comments by converting them to _comment key-value pairs.
+        Comments are associated with their nearest key based on indentation and context.
+        """
+        if path is None:
+            path = []
+        
+        if isinstance(data, dict):
+            result = {}
+            
+            # Preserve existing _comment fields
+            if '_comment' in data:
+                result['_comment'] = data['_comment']
+            
+            # Collect comments that belong to this level
+            current_indent = len(path)
+            level_comments = []
+            
+            for comment in comments:
+                # Match comments to this level based on indent and path
+                if comment['indent_level'] == current_indent:
+                    # If comment has key_context, check if it matches a key at this level
+                    if comment['key_context'] and comment['key_context'] in data:
+                        # This comment belongs to a specific key
+                        # We'll add it when processing that key
+                        pass
+                    else:
+                        # This is a general comment for this level
+                        level_comments.append(comment['comment_text'])
+            
+            # Add collected comments as _comment field if we have any
+            if level_comments:
+                combined_comment = ' '.join(level_comments)
+                if '_comment' in result:
+                    result['_comment'] = f"{result['_comment']} {combined_comment}"
+                else:
+                    result['_comment'] = combined_comment
+            
+            # Process each key-value pair
+            for key, value in data.items():
+                # Check if there's a comment specifically for this key
+                key_comments = []
+                for comment in comments:
+                    if (comment['key_context'] == key and 
+                        comment['indent_level'] == current_indent):
+                        # Include field name in the comment: "fieldname: comment text"
+                        formatted_comment = f"{key}: {comment['comment_text']}"
+                        key_comments.append(formatted_comment)
+                
+                # Recursively process the value
+                new_path = path + [key]
+                processed_value = DeterministicYAML._add_comments_to_structure(value, comments, new_path)
+                
+                # If this key has comments, add them to a nested _comment if value is a dict
+                if key_comments and isinstance(processed_value, dict):
+                    key_comment = ' '.join(key_comments)
+                    if '_comment' in processed_value:
+                        processed_value['_comment'] = f"{processed_value['_comment']} {key_comment}"
+                    else:
+                        processed_value['_comment'] = key_comment
+                elif key_comments:
+                    # If value is not a dict, we need to wrap it or add comment at parent level
+                    # For now, add to parent level _comment
+                    key_comment = ' '.join(key_comments)
+                    if '_comment' in result:
+                        result['_comment'] = f"{result['_comment']} {key_comment}"
+                    else:
+                        result['_comment'] = key_comment
+                
+                result[key] = processed_value
+            
+            return result
+        elif isinstance(data, list):
+            return [DeterministicYAML._add_comments_to_structure(item, comments, path) for item in data]
+        else:
+            return data
+    
+    @staticmethod
     def normalize(yaml_str: str) -> str:
         """
-        Normalize YAML to deterministic format.
+        Normalize YAML to deterministic format, preserving human comments.
         
         This converts any valid YAML to deterministic YAML format.
+        Comments (both line and inline) are extracted and converted to _comment fields
+        to preserve human insight as first-class data that survives all operations.
+        
+        The normalize method:
+        1. Extracts all comments from the original YAML text
+        2. Parses the YAML data structure
+        3. Maps comments to their appropriate locations in the structure
+        4. Adds them as _comment key-value pairs
+        5. Generates deterministic YAML with comments preserved as data
+        
+        Args:
+            yaml_str: Input YAML string (may contain # comments)
+        
+        Returns:
+            Deterministic YAML string with comments preserved as _comment fields
+        
+        Example:
+            Input:
+                # User profile
+                name: John  # User's name
+                age: 30
+            
+            Output:
+                _comment: "User profile name: User's name"
+                age: 30
+                name: John
         """
         try:
+            # First, extract comments from the original text
+            comments = DeterministicYAML._extract_comments(yaml_str)
+            
+            # Parse the YAML data (this will lose comments, but we'll add them back)
             data = yaml.safe_load(yaml_str)
+            
+            if data is None:
+                return 'null'
+            
+            # If we have comments, add them to the data structure as _comment fields
+            if comments:
+                # Ensure root is a dict to hold comments
+                if not isinstance(data, dict):
+                    data = {'_value': data}
+                
+                # Add comments to the structure
+                data = DeterministicYAML._add_comments_to_structure(data, comments)
+            
             return DeterministicYAML.to_deterministic_yaml(data)
         except Exception as e:
             raise ValueError(f"Failed to normalize YAML: {e}")
