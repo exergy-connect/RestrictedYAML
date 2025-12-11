@@ -151,6 +151,16 @@ config: {}
 
 **Formal Rule: Comments are strictly forbidden in Deterministic YAML.**
 
+#### Philosophy: Comments as Data, Not Metadata
+
+**Comments are human insight that must be preserved, not discarded.** Traditional YAML comments (`#`) are treated as metadata that gets lost, ignored, or rewritten unpredictably during:
+- Round-trip parsing
+- Normalization
+- Regeneration
+- Data transformation
+
+**Deterministic YAML treats comments as first-class data** — as key-value pairs that survive all operations. This ensures human insight doesn't vanish.
+
 #### Prohibition
 
 - **YAML comment syntax (`#`) is not allowed anywhere in Deterministic YAML**
@@ -158,11 +168,11 @@ config: {}
   - Line comments: `# This is a comment`
   - Inline comments: `key: value  # comment`
   - Block comments: `# Comment block`
-- **Rationale**: Comments introduce variance - the same logical data can have different comments, breaking determinism
+- **Rationale**: Comments introduce variance - the same logical data can have different comments, breaking determinism. More importantly, YAML comments are fragile metadata that gets lost during processing.
 
 #### Sanctioned Alternative: `_comment` Fields
 
-**When documentation is needed, use a `_comment` key with a string value:**
+**Comments matter — enough that they need to be handled deterministically, not thrown away.** Use a `_comment` key with a string value to preserve human insight as data:
 
 ```yaml
 # INVALID - Comments are forbidden
@@ -192,11 +202,12 @@ config:
 ```
 
 **Benefits of `_comment` fields:**
-- Deterministic: Same data always produces same YAML
-- Parseable: Comments are part of the data structure
-- Sortable: Comments are included in lexicographic key sorting
-- Portable: Comments survive round-trip through any YAML parser
-- LLM-friendly: Clear, unambiguous syntax
+- **Preserved as data**: Comments are part of the data structure, not metadata that can be lost
+- **Deterministic**: Same data always produces same YAML (comments included)
+- **Round-trip safe**: Comments survive regeneration, normalization, and any YAML parser
+- **Sortable**: Comments are included in lexicographic key sorting
+- **LLM-friendly**: Clear, unambiguous syntax for generating and preserving documentation
+- **Human insight preserved**: The human touch of comments is maintained, not discarded
 
 **Note**: The `_comment` convention is a data-level solution, not a syntax-level feature. It maintains determinism while allowing documentation.
 

@@ -82,9 +82,19 @@ age: 30
 
 ## Rationale
 
-### Why Forbid Comments?
+### Philosophy: To Comment is Human
 
-1. **Variance**: Same logical data can have different comments
+**Comments are human insight that must be preserved, not ignored.** They represent valuable context, explanations, and documentation that should survive all data operations.
+
+### Why Forbid YAML Comments (`#`)?
+
+1. **Lost during processing**: YAML comments are metadata that gets discarded during:
+   - Round-trip parsing (most parsers ignore comments)
+   - Normalization (comments stripped)
+   - Regeneration (comments not preserved)
+   - Data transformation (comments vanish)
+
+2. **Variance**: Same logical data can have different comments
    ```yaml
    # Version 1
    name: John
@@ -93,25 +103,29 @@ age: 30
    name: John  # User name
    ```
 
-2. **Non-deterministic**: Comments break canonical representation
+3. **Non-deterministic**: Comments break canonical representation
    - Same data → different YAML (due to comments)
    - Breaks determinism requirement
 
-3. **LLM Entropy**: Comments create branching points
+4. **LLM Entropy**: Comments create branching points
    - Model must decide: include comment? What comment?
    - Increases output variance
 
-4. **Parsing Ambiguity**: Comments can be ambiguous
+5. **Parsing Ambiguity**: Comments can be ambiguous
    - Inline comments: `key: value # comment` - is `#` part of value?
    - Whitespace sensitivity
 
 ### Why `_comment` Fields?
 
-1. **Deterministic**: Same data → same YAML (comments are part of data)
-2. **Parseable**: Comments survive round-trip through any YAML parser
-3. **Sortable**: Comments included in lexicographic key sorting
-4. **Explicit**: Clear, unambiguous syntax
-5. **LLM-friendly**: No ambiguity about where/how to include documentation
+**Comments matter — enough that they need to be handled deterministically, not thrown away.**
+
+1. **Preserved as data**: Comments are part of the data structure, ensuring they survive all operations
+2. **Deterministic**: Same data → same YAML (comments included)
+3. **Round-trip safe**: Comments survive regeneration, normalization, and any YAML parser
+4. **Sortable**: Comments included in lexicographic key sorting
+5. **Explicit**: Clear, unambiguous syntax
+6. **LLM-friendly**: No ambiguity about where/how to include documentation
+7. **Human insight preserved**: The human touch of comments is maintained, not discarded
 
 ## Validation
 
