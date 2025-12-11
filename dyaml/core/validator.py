@@ -84,14 +84,12 @@ def validate_string(yaml_str: str, strict: bool = False) -> ValidationResult:
     errors = []
     warnings = []
     
-    # Check if valid YAML first
-    try:
-        data = yaml.safe_load(yaml_str)
-    except yaml.YAMLError as e:
-        errors.append(ValidationError(0, f"Invalid YAML: {str(e)}"))
-        return ValidationResult(False, errors, warnings)
-    
     lines = yaml_str.split('\n')
+    
+    # Check for tabs first (before parsing, as tabs can cause parse errors)
+    for i, line in enumerate(lines, start=1):
+        if '\t' in line:
+            errors.append(ValidationError(i, "Tabs not allowed, use 2 spaces for indentation"))
     
     # Check for comments (not allowed in D-YAML)
     for i, line in enumerate(lines, start=1):
@@ -134,10 +132,13 @@ def validate_string(yaml_str: str, strict: bool = False) -> ValidationResult:
     if '&' in yaml_str or '*' in yaml_str:
         errors.append(ValidationError(0, "Anchors (&) and aliases (*) not allowed"))
     
-    # Check for tabs
-    for i, line in enumerate(lines, start=1):
-        if '\t' in line:
-            errors.append(ValidationError(i, "Tabs not allowed, use 2 spaces for indentation"))
+    # Check if valid YAML (only if no tab errors, as tabs cause parse failures)
+    data = None
+    if not any('tab' in e.message.lower() for e in errors):
+        try:
+            data = yaml.safe_load(yaml_str)
+        except yaml.YAMLError as e:
+            errors.append(ValidationError(0, f"Invalid YAML: {str(e)}"))
     
     # Check for trailing spaces
     for i, line in enumerate(lines, start=1):
