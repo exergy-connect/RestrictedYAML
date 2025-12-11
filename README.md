@@ -546,7 +546,7 @@ YAML Results:
 
 **The Design Philosophy:**
 
-We can't make humans or LLMs deterministic. We can make changes **visible** so humans can judge whether they're valuable or harmful.
+We can't make humans or LLMs deterministic. We can preserve comments so the LLM can take them into account.
 
 See [Addressing Semantic Drift](#-addressing-semantic-drift) for strategies.
 
