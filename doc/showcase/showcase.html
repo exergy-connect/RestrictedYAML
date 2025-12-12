@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deterministic YAML Showcase</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            color: #1a1a1a;
+            overflow: hidden;
+        }
+
+        .slide-container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            position: relative;
+        }
+
+        .slide {
+            background: white;
+            max-width: 1600px;
+            width: 100%;
+            height: 95vh;
+            padding: 20px 40px 80px 40px;
+            display: flex;
+            flex-direction: column;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Header Section */
+        .slide-header {
+            margin-bottom: 15px;
+            margin-top: 0;
+        }
+
+        .slide-title {
+            font-size: 36px;
+            font-weight: 700;
+            color: #003366;
+            margin-bottom: 8px;
+            line-height: 1.2;
+        }
+
+        .slide-subtitle {
+            font-size: 20px;
+            font-weight: 600;
+            color: #003366;
+            margin-bottom: 15px;
+        }
+
+        /* Main Content Section */
+        .slide-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            min-height: 0;
+        }
+
+        .yaml-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            background: #fafafa;
+            min-height: 0;
+            transition: border-color 0.3s ease;
+        }
+
+        .yaml-wrapper.regular {
+            border-color: #C17A5F;
+        }
+
+        .yaml-wrapper.deterministic {
+            border-color: #28a745;
+        }
+
+        .yaml-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .title-group {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .yaml-type-title {
+            font-size: 22px;
+            font-weight: 700;
+            color: #333;
+            transition: color 0.3s ease;
+            margin: 0;
+        }
+
+        .yaml-wrapper.regular .yaml-type-title {
+            color: #C17A5F;
+        }
+
+        .yaml-wrapper.deterministic .yaml-type-title {
+            color: #28a745;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .flip-button {
+            background: #666;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .flip-button:hover {
+            background: #555;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .flip-button:active {
+            transform: translateY(0);
+        }
+
+        .prompt-button {
+            background: #000000;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .prompt-button:hover {
+            background: #333333;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+        }
+
+        .prompt-button:active {
+            transform: translateY(0);
+        }
+
+        .prompt-button.copied {
+            background: #28a745;
+            box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+        }
+
+        .prompt-button.copied:hover {
+            background: #218838;
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4);
+        }
+
+        .yaml-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+
+        .prompt-display {
+            background: #f8f9fa;
+            border-left: 4px solid #666;
+            padding: 12px 15px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+        }
+
+        .prompt-display .prompt-label {
+            font-size: 11px;
+            font-weight: 700;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+
+        .prompt-text-display {
+            font-size: 14px;
+            line-height: 1.5;
+            color: #333;
+            font-style: italic;
+        }
+
+        .yaml-label {
+            font-size: 12px;
+            font-weight: 700;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+        }
+
+        .yaml-code {
+            flex: 1;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'Courier New', 'Monaco', 'Menlo', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            overflow-y: auto;
+            white-space: pre;
+            min-height: 0;
+        }
+
+        .yaml-code::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .yaml-code::-webkit-scrollbar-track {
+            background: #2d2d2d;
+            border-radius: 4px;
+        }
+
+        .yaml-code::-webkit-scrollbar-thumb {
+            background: #555;
+            border-radius: 4px;
+        }
+
+        .yaml-code::-webkit-scrollbar-thumb:hover {
+            background: #777;
+        }
+
+        /* Footer Section */
+        .slide-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: auto;
+            padding: 8px 0;
+            border-top: 2px solid #e0e0e0;
+            font-size: 14px;
+            color: #666;
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            min-height: 60px;
+            background: white;
+            padding-left: 40px;
+            padding-right: 40px;
+        }
+
+        .footer-left {
+            font-weight: 600;
+            color: #003366;
+            flex: 1;
+        }
+
+        .footer-right {
+            flex: 1;
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 20px;
+            padding: 0;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 1000px;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal-header {
+            background: #003366;
+            color: white;
+            padding: 20px 30px;
+            border-radius: 12px 12px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .modal-close {
+            background: transparent;
+            border: none;
+            color: white;
+            font-size: 28px;
+            font-weight: 300;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            transition: background 0.2s ease;
+        }
+
+        .modal-close:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .modal-body {
+            padding: 30px;
+            overflow-y: auto;
+            flex: 1;
+            font-size: 16px;
+            line-height: 1.8;
+            color: #333;
+        }
+
+        .modal-body pre {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 15px 0;
+            font-family: 'Courier New', 'Monaco', 'Menlo', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .prompt-section {
+            background: #f8f9fa;
+            border-left: 4px solid #003366;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+
+        .prompt-label {
+            font-size: 12px;
+            font-weight: 700;
+            color: #003366;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .prompt-text {
+            font-size: 16px;
+            line-height: 1.6;
+            color: #333;
+            font-style: italic;
+        }
+
+        .modal-body code {
+            font-family: 'Courier New', 'Monaco', 'Menlo', monospace;
+        }
+
+        .modal-body::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .modal-body::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        .modal-body::-webkit-scrollbar-thumb {
+            background: #000000;
+            border-radius: 4px;
+        }
+
+        .modal-body::-webkit-scrollbar-thumb:hover {
+            background: #333333;
+        }
+
+        .llm-response-button {
+            background: #003366;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .llm-response-button:hover {
+            background: #004488;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+        }
+
+        .llm-response-button:active {
+            transform: translateY(0);
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .slide {
+                padding: 15px 30px 70px 30px;
+            }
+
+            .slide-title {
+                font-size: 28px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .slide {
+                padding: 10px 20px 60px 20px;
+                height: 92vh;
+            }
+
+            .slide-title {
+                font-size: 24px;
+            }
+
+            .yaml-type-title {
+                font-size: 18px;
+            }
+
+            .yaml-code {
+                font-size: 12px;
+            }
+
+            .title-group {
+                flex-direction: column;
+                gap: 8px;
+                align-items: flex-start;
+            }
+
+            .button-group {
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .flip-button,
+            .prompt-button,
+            .llm-response-button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="slide-container">
+        <div class="slide">
+            <div class="slide-header">
+                <h1 class="slide-title">YAML vs Deterministic YAML</h1>
+                <div class="slide-subtitle">Compare how LLMs handle combining patient healthcare records into a list</div>
+            </div>
+
+            <div class="slide-content">
+                <div class="yaml-wrapper regular" id="yaml-wrapper">
+                    <div class="yaml-header">
+                        <div class="title-group">
+                            <h2 class="yaml-type-title" id="yaml-type-title">Regular YAML</h2>
+                            <button class="flip-button" onclick="flipYAML()" title="Switch between Regular and Deterministic YAML">Flip</button>
+                        </div>
+                        <div class="button-group">
+                            <button class="prompt-button" onclick="copyPrompt(this)" title="Copy prompt with current YAML sample">Prompt</button>
+                            <button class="llm-response-button" onclick="showLLMResponse()" title="Show sample LLM response">Show sample LLM response</button>
+                        </div>
+                    </div>
+                    <div class="yaml-container">
+                        <div class="prompt-display">
+                            <div class="prompt-label">Prompt:</div>
+                            <div class="prompt-text-display" id="prompt-text-display">Combine these two patient healthcare records into a single list. Each record should become an item in the list, preserving all their properties and nursing notes.</div>
+                        </div>
+                        <div class="yaml-label">YAML Sample:</div>
+                        <div class="yaml-code" id="yaml-code"># Elderly patient with diabetes - blood sugar levels stable, continue monitoring
+patient_001:
+  patient_id: "P-2025-001"
+  age: 72
+  condition: "diabetes type 2"
+  medication: "metformin 500mg twice daily"
+  last_glucose: 125
+
+# Pediatric case - fever resolved, parents informed of discharge plan
+patient_002:
+  patient_id: "P-2025-002"
+  age: 8
+  condition: "viral infection"
+  medication: "ibuprofen"  # switched from acetaminophen - better response observed, no adverse reactions
+  temperature: 98.6
+  discharge_date: "2025-12-10"</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="slide-footer">
+                <div class="footer-left">Deterministic YAML © 2025</div>
+                <div class="footer-right"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Main prompt text
+        const mainPrompt = "Combine these two patient healthcare records into a single list. Each record should become an item in the list, preserving all their properties and nursing notes.";
+
+        // YAML content
+        const yamlContent = {
+            regular: `# Elderly patient with diabetes - blood sugar levels stable, continue monitoring
+patient_001:
+  patient_id: "P-2025-001"
+  age: 72
+  condition: "diabetes type 2"
+  medication: "metformin 500mg twice daily"
+  last_glucose: 125
+
+# Pediatric case - fever resolved, parents informed of discharge plan
+patient_002:
+  patient_id: "P-2025-002"
+  age: 8
+  condition: "viral infection"
+  medication: "ibuprofen"  # switched from acetaminophen - better response observed, no adverse reactions
+  temperature: 98.6
+  discharge_date: "2025-12-10"`,
+            deterministic: `patient_001:
+  $human$: "Elderly patient with diabetes - blood sugar levels stable, continue monitoring"
+  age: 72
+  condition: diabetes type 2
+  last_glucose: 125
+  medication: metformin 500mg twice daily
+  patient_id: P-2025-001
+patient_002:
+  $human$: "Pediatric case - fever resolved, parents informed of discharge plan | medication: switched from acetaminophen - better response observed, no adverse reactions"
+  age: 8
+  condition: viral infection
+  discharge_date: 2025-12-10
+  medication: ibuprofen
+  patient_id: P-2025-002
+  temperature: 98.6`
+        };
+
+        let currentType = 'regular';
+
+        function flipYAML() {
+            // Toggle between regular and deterministic
+            currentType = currentType === 'regular' ? 'deterministic' : 'regular';
+            
+            // Update wrapper class
+            const wrapper = document.getElementById('yaml-wrapper');
+            wrapper.className = `yaml-wrapper ${currentType}`;
+            
+            // Update title
+            const title = document.getElementById('yaml-type-title');
+            title.textContent = currentType === 'regular' ? 'Regular YAML' : 'Deterministic YAML';
+            
+            // Update code content
+            const code = document.getElementById('yaml-code');
+            code.textContent = yamlContent[currentType];
+        }
+
+        function copyPrompt(button) {
+            const yamlCode = document.getElementById('yaml-code').textContent;
+            
+            // Combine main prompt with the YAML sample
+            const fullPrompt = `${mainPrompt}\n\n${yamlCode}`;
+            
+            // Copy to clipboard
+            navigator.clipboard.writeText(fullPrompt).then(function() {
+                // Show feedback
+                const originalText = button.textContent;
+                button.textContent = 'Copied!';
+                button.classList.add('copied');
+                
+                // Reset after 2 seconds
+                setTimeout(function() {
+                    button.textContent = 'Prompt';
+                    button.classList.remove('copied');
+                }, 2000);
+            }).catch(function(err) {
+                // Fallback for older browsers
+                const textArea = document.createElement('textarea');
+                textArea.value = fullPrompt;
+                textArea.style.position = 'fixed';
+                textArea.style.opacity = '0';
+                document.body.appendChild(textArea);
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    button.textContent = 'Copied!';
+                    button.classList.add('copied');
+                    setTimeout(function() {
+                        button.textContent = 'Prompt';
+                        button.classList.remove('copied');
+                    }, 2000);
+                } catch (err) {
+                    alert('Failed to copy. Please select and copy manually.');
+                }
+                document.body.removeChild(textArea);
+            });
+        }
+
+        // LLM Response content
+        const llmResponses = {
+            regular: `Here's the combined list—nothing fancy, just the two records grouped cleanly:
+
+\`\`\`yaml
+patients:
+  - patient_id: "P-2025-001"
+    age: 72
+    condition: "diabetes type 2"
+    medication: "metformin 500mg twice daily"
+    last_glucose: 125
+    notes: "Elderly patient with diabetes - blood sugar levels stable, continue monitoring"
+
+  - patient_id: "P-2025-002"
+    age: 8
+    condition: "viral infection"
+    medication: "ibuprofen"  # switched from acetaminophen - better response observed, no adverse reactions
+    temperature: 98.6
+    discharge_date: "2025-12-10"
+    notes: "Pediatric case - fever resolved, parents informed of discharge plan"
+\`\`\``,
+            deterministic: `Here's the merged list. Nothing fancy—just both records bundled together, intact:
+
+\`\`\`yaml
+patients:
+  - patient_001:
+      $human$: "Elderly patient with diabetes - blood sugar levels stable, continue monitoring"
+      age: 72
+      condition: diabetes type 2
+      last_glucose: 125
+      medication: metformin 500mg twice daily
+      patient_id: P-2025-001
+
+  - patient_002:
+      $human$: "Pediatric case - fever resolved, parents informed of discharge plan | medication: switched from acetaminophen - better response observed, no adverse reactions"
+      age: 8
+      condition: viral infection
+      discharge_date: 2025-12-10
+      medication: ibuprofen
+      patient_id: P-2025-002
+      temperature: 98.6
+\`\`\``
+        };
+
+        function showLLMResponse() {
+            const modal = document.getElementById('llm-response-modal');
+            const modalBody = document.getElementById('modal-body-content');
+            
+            // Get the appropriate response based on current type
+            const response = llmResponses[currentType];
+            
+            // Build HTML content starting with the prompt
+            let htmlContent = '<div class="prompt-section">';
+            htmlContent += '<div class="prompt-label">Prompt sent to LLM:</div>';
+            htmlContent += '<div class="prompt-text">' + escapeHtml(mainPrompt) + '</div>';
+            htmlContent += '</div>';
+            
+            // Split by code blocks
+            const parts = response.split(/```yaml\n([\s\S]*?)```/);
+            
+            for (let i = 0; i < parts.length; i++) {
+                if (i % 2 === 0) {
+                    // Regular text
+                    let text = parts[i];
+                    if (text.trim()) {
+                        // Convert markdown bold
+                        text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                        // Convert line breaks
+                        text = text.replace(/\n/g, '<br>');
+                        htmlContent += '<p>' + text + '</p>';
+                    }
+                } else {
+                    // Code block
+                    htmlContent += '<pre><code>' + escapeHtml(parts[i].trim()) + '</code></pre>';
+                }
+            }
+            
+            modalBody.innerHTML = htmlContent;
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('llm-response-modal');
+            modal.classList.remove('active');
+            document.body.style.overflow = 'auto';
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('llm-response-modal');
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+
+        // Close modal with Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeModal();
+            }
+        });
+    </script>
+
+    <!-- LLM Response Modal -->
+    <div id="llm-response-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Sample LLM Response</h2>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="modal-body-content">
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+
