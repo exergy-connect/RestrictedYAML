@@ -3,10 +3,31 @@ Convert comments to $human$ fields in YAML data structures.
 
 This module handles the deterministic conversion of YAML comments
 into $human$ key-value pairs that preserve human context.
+
+Copyright (c) 2025 Exergy ∞ LLC
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 """
 
 from typing import Any, Dict, List, Optional
 from .parser import CommentInfo
+from .crc32 import add_crc32
 
 
 def consolidate_comments(comments: List[CommentInfo], key_path: List[str]) -> Optional[str]:
@@ -115,7 +136,8 @@ def add_human_fields(data: Any, comments: List[CommentInfo], path: Optional[List
 def convert_yaml_to_deterministic(
     data: Any,
     comments: List[CommentInfo],
-    preserve_comments: bool = True
+    preserve_comments: bool = True,
+    add_crc32_checksums: bool = False
 ) -> Any:
     """
     Convert YAML data structure to deterministic format with $human$ fields.
@@ -124,15 +146,45 @@ def convert_yaml_to_deterministic(
         data: Parsed YAML data
         comments: List of extracted comments
         preserve_comments: If True, add $human$ fields. If False, strip them.
+        add_crc32_checksums: If True, add CRC32 checksums to $human$ fields
         
     Returns:
         Data structure ready for deterministic serialization
     """
     if preserve_comments:
-        return add_human_fields(data, comments)
+        result = add_human_fields(data, comments)
+        if add_crc32_checksums:
+            result = add_crc32_to_human_fields(result)
+        return result
     else:
         # Strip all $human$ fields
         return strip_human_fields(data)
+
+
+def add_crc32_to_human_fields(data: Any) -> Any:
+    """
+    Recursively add CRC32 checksums to all $human$ fields in data structure.
+    
+    Args:
+        data: Python data structure
+        
+    Returns:
+        Data structure with CRC32 checksums added to $human$ fields
+    """
+    if isinstance(data, dict):
+        result = {}
+        for key, value in data.items():
+            if key == '$human$' and isinstance(value, str):
+                # Add CRC32 checksum to $human$ field
+                result[key] = add_crc32(value)
+            else:
+                # Recursively process nested structures
+                result[key] = add_crc32_to_human_fields(value)
+        return result
+    elif isinstance(data, list):
+        return [add_crc32_to_human_fields(item) for item in data]
+    else:
+        return data
 
 
 def strip_human_fields(data: Any) -> Any:

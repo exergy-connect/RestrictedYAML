@@ -2,12 +2,33 @@
 Deterministic YAML validation.
 
 This module validates YAML files against the Deterministic YAML specification.
+
+Copyright (c) 2025 Exergy ∞ LLC
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 """
 
 import sys
 from pathlib import Path
 from typing import List, Dict, Any, Optional, Tuple
 import yaml
+from .crc32 import validate_crc32
 import re
 
 # Add lib directory to path
@@ -53,13 +74,14 @@ class ValidationResult:
         }
 
 
-def validate_file(file_path: str, strict: bool = False) -> ValidationResult:
+def validate_file(file_path: str, strict: bool = False, validate_crc32_checksums: bool = True) -> ValidationResult:
     """
     Validate a Deterministic YAML file.
     
     Args:
         file_path: Path to YAML file
         strict: If True, perform stricter validation
+        validate_crc32_checksums: If True, validate CRC32 checksums when present in $human$ fields (default: True)
         
     Returns:
         ValidationResult object
@@ -67,16 +89,17 @@ def validate_file(file_path: str, strict: bool = False) -> ValidationResult:
     with open(file_path, 'r', encoding='utf-8') as f:
         content = f.read()
     
-    return validate_string(content, strict)
+    return validate_string(content, strict, validate_crc32_checksums)
 
 
-def validate_string(yaml_str: str, strict: bool = False) -> ValidationResult:
+def validate_string(yaml_str: str, strict: bool = False, validate_crc32_checksums: bool = True) -> ValidationResult:
     """
     Validate a Deterministic YAML string.
     
     Args:
         yaml_str: YAML string content
         strict: If True, perform stricter validation
+        validate_crc32_checksums: If True, validate CRC32 checksums when present in $human$ fields (default: True)
         
     Returns:
         ValidationResult object
@@ -145,15 +168,25 @@ def validate_string(yaml_str: str, strict: bool = False) -> ValidationResult:
         if line.rstrip() != line and line.strip():
             errors.append(ValidationError(i, "Trailing spaces not allowed"))
     
-    # Check for flow style
-    if '{' in yaml_str or '[' in yaml_str:
+    # Check for flow style (but ignore CRC32 markers in quoted strings)
+    if '{' in yaml_str:
         # Check if it's inside quotes
-        if not _is_inside_quotes(yaml_str, yaml_str.find('{')):
-            errors.append(ValidationError(0, "Flow style ({}, []) not allowed, use block style"))
+        brace_pos = yaml_str.find('{')
+        if brace_pos >= 0 and not _is_inside_quotes(yaml_str, brace_pos):
+            errors.append(ValidationError(0, "Flow style ({}) not allowed, use block style"))
+    
+    # Check for flow style lists, but ignore CRC32 markers inside quoted strings
+    if '[' in yaml_str:
+        bracket_pos = yaml_str.find('[')
+        if bracket_pos >= 0:
+            # If inside quotes, it's likely a CRC32 marker (allowed)
+            # If not in quotes, it's flow style (not allowed)
+            if not _is_inside_quotes(yaml_str, bracket_pos):
+                errors.append(ValidationError(0, "Flow style ([]) not allowed, use block style"))
     
     # Validate data structure
     if data is not None:
-        struct_errors, struct_warnings = _validate_structure(data, yaml_str)
+        struct_errors, struct_warnings = _validate_structure(data, yaml_str, validate_crc32_checksums)
         errors.extend(struct_errors)
         warnings.extend(struct_warnings)
     
@@ -168,7 +201,7 @@ def validate_string(yaml_str: str, strict: bool = False) -> ValidationResult:
     return ValidationResult(valid, errors, warnings)
 
 
-def _validate_structure(data: Any, yaml_str: str, path: List[str] = None) -> Tuple[List[ValidationError], List[ValidationError]]:
+def _validate_structure(data: Any, yaml_str: str, validate_crc32_checksums: bool = True, path: List[str] = None) -> Tuple[List[ValidationError], List[ValidationError]]:
     """Validate data structure against D-YAML rules."""
     errors = []
     warnings = []
@@ -186,6 +219,18 @@ def _validate_structure(data: Any, yaml_str: str, path: List[str] = None) -> Tup
         keys_list = list(data.keys())
         if '$human$' in keys_list:
             human_index = keys_list.index('$human$')
+            
+            # Validate CRC32 checksum if present (always validate when present)
+            human_value = data['$human$']
+            if isinstance(human_value, str):
+                # Check if CRC32 marker is present
+                from .crc32 import extract_crc32
+                crc32_value, _ = extract_crc32(human_value)
+                if crc32_value is not None:
+                    # CRC32 marker present - validate it
+                    is_valid, error_msg = validate_crc32(human_value)
+                    if not is_valid:
+                        errors.append(ValidationError(0, f"$human$ field at path {'.'.join(path)}: {error_msg}"))
             if human_index != 0:
                 warnings.append(ValidationError(0, f"$human$ field should be first in object at path {'.'.join(path)}"))
         
@@ -199,14 +244,14 @@ def _validate_structure(data: Any, yaml_str: str, path: List[str] = None) -> Tup
         # Validate nested structures
         for key, value in data.items():
             nested_path = path + [str(key)]
-            nested_errors, nested_warnings = _validate_structure(value, yaml_str, nested_path)
+            nested_errors, nested_warnings = _validate_structure(value, yaml_str, validate_crc32_checksums, nested_path)
             errors.extend(nested_errors)
             warnings.extend(nested_warnings)
     
     elif isinstance(data, list):
         for i, item in enumerate(data):
             nested_path = path + [str(i)]
-            nested_errors, nested_warnings = _validate_structure(item, yaml_str, nested_path)
+            nested_errors, nested_warnings = _validate_structure(item, yaml_str, validate_crc32_checksums, nested_path)
             errors.extend(nested_errors)
             warnings.extend(nested_warnings)
     

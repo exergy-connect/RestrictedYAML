@@ -263,19 +263,93 @@ $human$:
 
 **Note**: The `$human$` convention is a data-level solution, not a syntax-level feature. It maintains determinism while allowing documentation. The `$human$` key is reserved and always sorts first within its parent object.
 
-### 11. Anchors and Aliases
+### 11. Human Field Integrity (Optional): Embedded CRC Marker
+
+The `$human$` field may contain an embedded CRC32 checksum at the end of its value.
+
+Because multi-line scalars are forbidden in Deterministic YAML, the entire value MUST be represented as a single quoted string. You may include `\n` escape sequences if desired, but they are not required before the CRC marker.
+
+#### 11.1 Format
+
+The CRC marker MUST appear at the very end of the `$human$` string value, using the exact syntax:
+
+```
+[crc32:<base64>]
+```
+
+**Example (valid Deterministic YAML):**
+
+```yaml
+$human$: "Human-authored text that must remain stable.[crc32:3kH6xA==]"
+```
+
+If you prefer human-readable line separation, that is allowed:
+
+```yaml
+$human$: "Line one.\nLine two.\nLine three.[crc32:3kH6xA==]"
+```
+
+Both are legal. **No newline before the marker is required.**
+
+#### 11.2 Checksum Scope
+
+CRC32 MUST be computed over all bytes before the marker, i.e.:
+
+- Everything up to the first character of `[` in `[crc32:...]`
+- No special handling of `\n` escapes: the literal byte sequence of the string (after YAML unescaping) is what gets hashed
+
+In short:
+
+**CRC32 covers: the exact UTF-8 bytes of the string value minus the final `[crc32:...]` segment.**
+
+There is no rule requiring a newline before the checksum.
+
+#### 11.3 Determinism Requirements
+
+When a CRC marker is present:
+
+- The marker MUST use the exact format `[crc32:<base64>]`.
+- `$human$` content (everything before the marker) MUST NOT be altered by deterministic transforms.
+- Normalizers MUST leave the `$human$` field untouched.
+- A mismatch between CRC and content marks the document as invalid.
+
+#### 11.4 LLM Interaction Rules
+
+When a `$human$` field includes a CRC marker:
+
+- LLMs MUST NOT modify `$human$`.
+- LLMs MUST NOT regenerate or recompute the CRC.
+- LLMs MUST preserve the quoted string byte-for-byte.
+
+If a user asks to modify `$human$`, the correct behavior is:
+
+- Output a version without the CRC marker, so external tooling recomputes it.
+
+#### 11.5 Intended Purpose
+
+The embedded CRC provides:
+
+- Protection against unintentional drift
+- A deterministic way to detect changes
+- Stability for human-authored intent
+- Compatibility with Deterministic YAML's constraints
+- Simple external validation
+
+**It is not cryptographic; it is purely a drift-detection mechanism.**
+
+### 12. Anchors and Aliases
 
 - **Forbidden**
 - `&anchor` and `*alias` syntax is not permitted
 - Reduces complexity and variance
 
-### 12. Document Markers
+### 13. Document Markers
 
 - **Forbidden**
 - No `---` (document start) or `...` (document end)
 - Single document only
 
-### 13. Key Ordering (Mandatory)
+### 14. Key Ordering (Mandatory)
 
 - **Mappings must be lexicographically sorted by key**, using Unicode codepoint ordering
 - This means:
@@ -284,7 +358,7 @@ $human$:
   - Identical materialization across runs, platforms, languages, and models
 - This is the single biggest win for LLM determinism besides quoting rules
 
-### 14. Encoding
+### 15. Encoding
 
 - **UTF-8 only**
 - **No BOM**
