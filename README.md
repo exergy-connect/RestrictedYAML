@@ -4,15 +4,15 @@ A **restrictive, LLM-friendly subset of YAML** that remains **100% valid YAML**,
 
 **Deterministic YAML preserves comments** through `$human$` fields—the golden seams that show where human judgment intervened. Every repair, every insight, becomes visible evidence of human contribution.
 
-Deterministic YAML provides a canonical, predictable serialization format ideal for structured data generation and configuration, with **Kintsukuroi for data**—making human contribution visible and permanent.
+Deterministic YAML provides a canonical, predictable serialization format ideal for structured data generation and configuration, with **Kintsugi for data**—making human contribution visible and permanent.
 
 ---
 
-## 💭 Fundamental Philosophy: Kintsukuroi for Data
+## 💭 Fundamental Philosophy: Kintsugi for Data
 
 **The pottery was always going to break. The question is whether we hide the cracks or fill them with gold.**
 
-Deterministic YAML applies the 500-year-old Japanese art of **Kintsukuroi** (金継ぎ) to configuration files. In Kintsukuroi, broken pottery is repaired with gold, making the repairs visible and beautiful rather than hidden. The mended object is more valuable for having been broken.
+Deterministic YAML applies the 500-year-old Japanese art of **[Kintsugi](https://en.wikipedia.org/wiki/Kintsugi)** (金継ぎ, "golden joinery") to configuration files. In Kintsugi, broken pottery is repaired with gold, making the repairs visible and beautiful rather than hidden. The mended object is more valuable for having been broken.
 
 ### Making Human Intervention Visible
 
@@ -21,7 +21,7 @@ Deterministic YAML applies the 500-year-old Japanese art of **Kintsukuroi** (金
 - Comment lost → regenerate without it → no trace it existed
 - Hallucination occurs → correct it silently → history erased
 
-**Kintsukuroi approach:**
+**Kintsugi approach:**
 - Bug appears → fix it → mark where it was broken
 - Comment lost → preserve it as `$human$` → make the human insight visible
 - Hallucination occurs → recognize it → turn the crack into gold
@@ -34,9 +34,9 @@ When an LLM regenerates config:
 - **Without `$human$`**: Silent drift, invisible degradation
 - **With `$human$`**: The human touchpoints remain visible, like gold in the cracks
 
-### Kintsukuroi Principles Applied
+### Kintsugi Principles Applied
 
-**Kintsukuroi principles:**
+**Kintsugi principles:**
 - Breakage and repair are part of the object's history
 - Visibility of repairs adds value
 - The mended object is more beautiful for having been broken
@@ -381,7 +381,7 @@ service:
   timeout: 30
 ```
 
-The `$human$` field preserves the history of the fix, making the repair visible rather than hidden. This is Kintsukuroi applied to configuration—the crack (the error) becomes a golden seam (the `$human$` annotation) that adds value.
+The `$human$` field preserves the history of the fix, making the repair visible rather than hidden. This is Kintsugi applied to configuration—the crack (the error) becomes a golden seam (the `$human$` annotation) that adds value.
 
 ### Real-World Example: The "deemvice" Incident
 
@@ -690,11 +690,11 @@ This project emerged through human-AI collaboration:
 
 - **ChatGPT (OpenAI)** - Initial concept exploration, generated the "deemvice" hallucination that became the proof-of-concept
 
-- **Claude (Anthropic)** - Specification refinement, kintsukuroi philosophy integration, documentation development
+- **Claude (Anthropic)** - Specification refinement, Kintsugi philosophy integration, documentation development
 
 ### Philosophical Foundations
 
-- **Kintsukuroi (金継ぎ)** - 500-year-old Japanese art of golden repair, inspiring the `$human$` annotation philosophy
+- **[Kintsugi](https://en.wikipedia.org/wiki/Kintsugi)** (金継ぎ, "golden joinery") - 500-year-old Japanese art of golden repair, inspiring the `$human$` annotation philosophy
 
 ### Community Feedback
 
