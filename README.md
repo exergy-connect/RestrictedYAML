@@ -236,7 +236,7 @@ print(deterministic_yaml)
 
 **Output:**
 ```yaml
-$human$: "This is a comment name: Quoted string tags: Flow style"
+$human$: "This is a comment | name: Quoted string | tags: Flow style"
 age: 30
 name: John
 tags:

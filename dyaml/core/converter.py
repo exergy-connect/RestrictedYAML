@@ -57,14 +57,17 @@ def consolidate_comments(comments: List[CommentInfo], key_path: List[str]) -> Op
         return None
     
     # Consolidate comments with | delimiter
+    # Escape pipe characters in comments to avoid ambiguity
     parts = []
     for comment in relevant_comments:
+        # Escape pipes in comment text
+        escaped_text = comment.text.replace('|', '\\|')
         if comment.associated_key:
             # Inline comment associated with a key
-            parts.append(f"{comment.associated_key}: {comment.text}")
+            parts.append(f"{comment.associated_key}: {escaped_text}")
         else:
             # Line comment
-            parts.append(comment.text)
+            parts.append(escaped_text)
     
     return " | ".join(parts)
 

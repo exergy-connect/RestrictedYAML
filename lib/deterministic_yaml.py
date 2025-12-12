@@ -452,6 +452,64 @@ class DeterministicYAML:
         return comments
     
     @staticmethod
+    def _escape_pipe_in_comment(comment: str) -> str:
+        """
+        Escape pipe characters in a comment to avoid ambiguity with the delimiter.
+        
+        Escapes '|' as '\\|' so that comments containing pipes can be safely
+        joined with ' | ' delimiter and later split correctly.
+        
+        Args:
+            comment: Comment text that may contain pipe characters
+            
+        Returns:
+            Comment text with pipes escaped
+        """
+        return comment.replace('|', '\\|')
+    
+    @staticmethod
+    def _format_comment_string(comment_texts: List[str]) -> str:
+        """
+        Format a list of comment texts into a single consolidated comment string.
+        
+        Comments are joined with ' | ' delimiter to clearly separate them.
+        Pipe characters within comments are escaped as '\\|' to avoid ambiguity.
+        This matches the CLI converter behavior for consistency.
+        
+        Args:
+            comment_texts: List of comment text strings
+            
+        Returns:
+            Consolidated comment string, or empty string if no comments
+        """
+        if not comment_texts:
+            return ""
+        # Filter out empty comments and escape pipes
+        non_empty = [DeterministicYAML._escape_pipe_in_comment(c.strip()) 
+                     for c in comment_texts if c and c.strip()]
+        if not non_empty:
+            return ""
+        return " | ".join(non_empty)
+    
+    @staticmethod
+    def _merge_human_fields(existing: Optional[str], new: str) -> str:
+        """
+        Merge an existing $human$ field value with a new comment string.
+        
+        Args:
+            existing: Existing $human$ value (can be None or empty)
+            new: New comment string to add
+            
+        Returns:
+            Merged comment string with ' | ' delimiter
+        """
+        if not new or not new.strip():
+            return existing or ""
+        if not existing or not existing.strip():
+            return new.strip()
+        return f"{existing} | {new}".strip()
+    
+    @staticmethod
     def _add_comments_to_structure(data: Any, comments: List[Dict[str, Any]], path: Optional[List[str]] = None) -> Any:
         """
         Recursively add extracted comments to the data structure as $human$ fields.
@@ -491,13 +549,13 @@ class DeterministicYAML:
             
             # Add collected comments as $human$ field if we have any
             if level_comments:
-                combined_comment = ' '.join(level_comments)
-                if '$human$' in result:
-                    # Combine with existing $human$ value
-                    existing = str(result['$human$'])
-                    result['$human$'] = f"{existing} {combined_comment}".strip()
-                else:
-                    result['$human$'] = combined_comment
+                combined_comment = DeterministicYAML._format_comment_string(level_comments)
+                if combined_comment:
+                    if '$human$' in result:
+                        existing = str(result['$human$'])
+                        result['$human$'] = DeterministicYAML._merge_human_fields(existing, combined_comment)
+                    else:
+                        result['$human$'] = combined_comment
             
             # Process each key-value pair (skip $human$ as we already handled it)
             for key, value in data.items():
@@ -519,21 +577,22 @@ class DeterministicYAML:
                 
                 # If this key has comments, add them to a nested $human$ if value is a dict
                 if key_comments and isinstance(processed_value, dict):
-                    key_comment = ' '.join(key_comments)
-                    if '$human$' in processed_value:
-                        # Combine with existing $human$ value
-                        existing = str(processed_value['$human$'])
-                        processed_value['$human$'] = f"{existing} {key_comment}".strip()
-                    else:
-                        processed_value['$human$'] = key_comment
+                    key_comment = DeterministicYAML._format_comment_string(key_comments)
+                    if key_comment:
+                        if '$human$' in processed_value:
+                            existing = str(processed_value['$human$'])
+                            processed_value['$human$'] = DeterministicYAML._merge_human_fields(existing, key_comment)
+                        else:
+                            processed_value['$human$'] = key_comment
                 elif key_comments:
                     # If value is not a dict, add comment to parent level $human$
-                    key_comment = ' '.join(key_comments)
-                    if '$human$' in result:
-                        existing = str(result['$human$'])
-                        result['$human$'] = f"{existing} {key_comment}".strip()
-                    else:
-                        result['$human$'] = key_comment
+                    key_comment = DeterministicYAML._format_comment_string(key_comments)
+                    if key_comment:
+                        if '$human$' in result:
+                            existing = str(result['$human$'])
+                            result['$human$'] = DeterministicYAML._merge_human_fields(existing, key_comment)
+                        else:
+                            result['$human$'] = key_comment
                 
                 result[key] = processed_value
             
