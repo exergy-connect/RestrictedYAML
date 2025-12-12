@@ -613,7 +613,7 @@ service:
     content: Keep retries low due to downstream rate limits
     author: alice@example.com
     timestamp: 2024-12-11T15:30:00Z
-    hash: sha256:a3f89d2c1e4b7f...
+    hash: sha256:a3f89d2c1e4b7f8a9b0c1d2e3f4a5b6
   retries: 3
 ```
 
